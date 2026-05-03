@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morning Digest — Registered</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; }
+        h1 { font-size: 1.5rem; }
+        ul { padding-left: 20px; }
+    </style>
+</head>
+<body>
+    <h1>You're registered!</h1>
+    <p><strong>{{ email }}</strong></p>
+    <p>Your categories:</p>
+    <ul>
+        {% for cat in categories %}
+        <li>{{ cat | replace("_", " ") | title }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
