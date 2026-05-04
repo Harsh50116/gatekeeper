@@ -1,7 +1,7 @@
 import sqlite3
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "digest.db")
 
@@ -96,3 +96,46 @@ def register_user(email: str, categories: list[str]) -> str:
         raise ValueError("Email already registered")
     conn.close()
     return user_id
+
+
+def get_all_users() -> list[dict]:
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""
+        SELECT u.id, u.email, GROUP_CONCAT(uc.category) AS categories
+        FROM users u
+        JOIN user_categories uc ON u.id = uc.user_id
+        GROUP BY u.id, u.email
+    """).fetchall()
+    conn.close()
+    return [
+        {"id": r["id"], "email": r["email"], "categories": r["categories"].split(",")}
+        for r in rows
+    ]
+
+
+def get_user_items(user_id: str) -> dict[str, list[dict]]:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""
+        SELECT i.title, i.summary, i.url, i.source, i.category, i.published
+        FROM items i
+        JOIN user_categories uc ON i.category = uc.category
+        WHERE uc.user_id = ?
+          AND i.published >= ?
+        ORDER BY i.category, i.published DESC
+    """, (user_id, cutoff)).fetchall()
+    conn.close()
+
+    items_by_category: dict[str, list[dict]] = {}
+    for r in rows:
+        cat = r["category"]
+        items_by_category.setdefault(cat, []).append({
+            "title": r["title"],
+            "summary": r["summary"],
+            "url": r["url"],
+            "source": r["source"],
+            "published": r["published"],
+        })
+    return items_by_category
