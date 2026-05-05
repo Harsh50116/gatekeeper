@@ -3,40 +3,368 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Morning Digest — Register</title>
+    <title>Digest — A three-minute briefing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; }
-        h1 { font-size: 1.5rem; }
-        label { display: block; margin: 8px 0; }
-        input[type="email"] { width: 100%; padding: 8px; box-sizing: border-box; }
-        .checkbox-group { margin: 16px 0; }
-        button { padding: 10px 24px; cursor: pointer; }
-        .error { color: #c00; margin: 12px 0; }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #111;
+            --text: #e8e0d6;
+            --text-muted: #9a9088;
+            --text-faint: #6b635b;
+            --text-dim: #4a443e;
+            --accent: #c47a3a;
+            --divider: #2a2520;
+            --toggle-bg: #333;
+            --circle-inner: #111;
+        }
+
+        body.light {
+            --bg: #f5f0eb;
+            --text: #1a1715;
+            --text-muted: #6b635b;
+            --text-faint: #9a9088;
+            --text-dim: #b5ada5;
+            --accent: #c47a3a;
+            --divider: #d5cec6;
+            --toggle-bg: #ccc;
+            --circle-inner: #f5f0eb;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 40px 24px 60px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 64px;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            color: var(--text);
+        }
+
+        .theme-toggle {
+            width: 44px;
+            height: 24px;
+            background: var(--toggle-bg);
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            border: none;
+            transition: background 0.3s;
+        }
+
+        .theme-toggle::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            top: 3px;
+            right: 3px;
+            transition: right 0.3s;
+        }
+
+        body.light .theme-toggle::after {
+            right: 23px;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 400;
+            line-height: 1.2;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 em {
+            color: var(--accent);
+            font-style: italic;
+        }
+
+        .hero p {
+            font-size: 0.95rem;
+            font-weight: 300;
+            color: var(--text-muted);
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: var(--divider);
+            margin: 40px 0;
+        }
+
+        /* Sections */
+        .section-label {
+            text-align: center;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            margin-bottom: 32px;
+        }
+
+        /* Email input */
+        .email-group {
+            margin-bottom: 8px;
+        }
+
+        .email-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--divider);
+            padding: 16px 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 300;
+            color: var(--text);
+            outline: none;
+            text-align: center;
+        }
+
+        .email-input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .email-input:focus {
+            border-bottom-color: var(--accent);
+        }
+
+        /* Categories */
+        .category-list {
+            list-style: none;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--divider);
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .category-item:hover {
+            opacity: 0.8;
+        }
+
+        .category-num {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            width: 48px;
+            flex-shrink: 0;
+        }
+
+        .category-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.35rem;
+            font-weight: 400;
+            flex: 1;
+        }
+
+        .category-check {
+            display: none;
+        }
+
+        .category-circle {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 1.5px solid var(--text-dim);
+            flex-shrink: 0;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .category-check:checked + .category-item .category-circle {
+            border-color: var(--accent);
+            background: var(--accent);
+        }
+
+        .category-check:checked + .category-item .category-circle::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 10px;
+            height: 10px;
+            background: var(--circle-inner);
+            border-radius: 50%;
+        }
+
+        /* Footer */
+        .footer-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 48px;
+        }
+
+        .counter {
+            font-size: 0.8rem;
+            letter-spacing: 0.15em;
+            color: var(--text-faint);
+        }
+
+        .counter span {
+            color: var(--accent);
+        }
+
+        .subscribe-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: color 0.2s;
+        }
+
+        .subscribe-btn:hover {
+            color: var(--accent);
+        }
+
+        .subscribe-btn .arrow {
+            font-size: 1.2rem;
+        }
+
+        /* Bottom info */
+        .bottom-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 64px;
+            padding-top: 24px;
+            border-top: 1px solid var(--divider);
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        /* Error */
+        .error {
+            text-align: center;
+            color: var(--accent);
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+        }
     </style>
 </head>
 <body>
-    <h1>Morning Digest</h1>
-    <p>Enter your email and pick the categories you want in your daily digest.</p>
-
-    {% if error %}
-    <p class="error">{{ error }}</p>
-    {% endif %}
-
-    <form method="POST" action="/register">
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" value="{{ email }}" required>
-
-        <div class="checkbox-group">
-            {% for cat in categories %}
-            <label>
-                <input type="checkbox" name="categories" value="{{ cat }}"
-                    {% if cat in selected %}checked{% endif %}>
-                {{ cat | replace("_", " ") | title }}
-            </label>
-            {% endfor %}
+    <div class="container">
+        <div class="header">
+            <div class="logo">Digest</div>
+            <button class="theme-toggle" aria-label="Toggle theme"></button>
         </div>
 
-        <button type="submit">Register</button>
-    </form>
+        <div class="hero">
+            <h1>A three-minute briefing,<br><em>delivered each morning.</em></h1>
+            <p>Pick the fields that matter to you. Each morning we compile what happened and what's ahead, sent as a short audio briefing before breakfast.</p>
+        </div>
+
+        {% if error %}
+        <p class="error">{{ error }}</p>
+        {% endif %}
+
+        <form method="POST" action="/register" id="digestForm">
+            <div class="divider"></div>
+            <div class="section-label">Where to send it</div>
+            <div class="email-group">
+                <input type="email" name="email" class="email-input" placeholder="name@example.com" value="{{ email }}" required>
+            </div>
+
+            <div class="divider"></div>
+            <div class="section-label">Select your fields</div>
+
+            <ul class="category-list">
+                {% set display_names = {
+                    'tech_ai': 'Tech & AI',
+                    'business_markets': 'Business & Markets',
+                    'sports': 'Sports',
+                    'world_news': 'World News',
+                    'science': 'Science'
+                } %}
+                {% for cat in categories %}
+                <li>
+                    <input type="checkbox" name="categories" value="{{ cat }}" id="cat-{{ cat }}" class="category-check"
+                        {% if cat in selected %}checked{% endif %}>
+                    <label class="category-item" for="cat-{{ cat }}">
+                        <span class="category-num">{{ "%02d"|format(loop.index) }}</span>
+                        <span class="category-name">{{ display_names.get(cat, cat | replace("_", " ") | title) }}</span>
+                        <span class="category-circle"></span>
+                    </label>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div class="divider"></div>
+
+            <div class="footer-bar">
+                <div class="counter"><span id="count">0</span> / 5 SELECTED</div>
+                <button type="submit" class="subscribe-btn">SUBSCRIBE <span class="arrow">&rarr;</span></button>
+            </div>
+
+            <div class="bottom-info">
+                <span>Sent daily at 7:00 AM</span>
+                <span>Unsubscribe anytime</span>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const checks = document.querySelectorAll('.category-check');
+        const counter = document.getElementById('count');
+
+        function updateCount() {
+            counter.textContent = document.querySelectorAll('.category-check:checked').length;
+        }
+
+        checks.forEach(cb => cb.addEventListener('change', updateCount));
+        updateCount();
+
+        const toggle = document.querySelector('.theme-toggle');
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('light');
+        }
+        toggle.addEventListener('click', function() {
+            document.body.classList.toggle('light');
+            localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark');
+        });
+    </script>
 </body>
 </html>

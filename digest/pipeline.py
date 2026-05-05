@@ -7,6 +7,7 @@ from .store import get_all_users, get_user_items
 from .summarizer import build_user_digest, clear_cache
 from .tts import generate_audio, cleanup_old_audio
 from .storage import upload_audio, delete_audio
+from .mailer import send_digest_email
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,8 @@ def run_pipeline():
 
         audio_path = generate_audio(digest_text, email)
         public_url = upload_audio(audio_path)
+
+        send_digest_email(email, public_url)
 
         results.append({"email": email, "url": public_url})
         logger.info("  Done: %s", public_url)
