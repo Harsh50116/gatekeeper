@@ -33,7 +33,7 @@ def _call_llm(system: str, user: str) -> str:
             "temperature": 0.4,
             "max_tokens": 1024,
         },
-        timeout=60.0,
+        timeout=180.0,
     )
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"].strip()
