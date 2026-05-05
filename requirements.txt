@@ -3,3 +3,4 @@ httpx
 yfinance
 flask
 python-dotenv
+gTTS
