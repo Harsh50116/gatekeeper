@@ -1,6 +1,10 @@
 import asyncio
 import logging
+import os
 import time
+
+from dotenv import load_dotenv
+load_dotenv()
 
 from .main import run as run_scraper
 from .store import get_all_users, get_user_items
@@ -56,3 +60,11 @@ def run_pipeline():
     elapsed = time.time() - start
     logger.info("Pipeline finished. %d digests generated in %.1fs", len(results), elapsed)
     return results
+
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
+    run_pipeline()
