@@ -5,3 +5,4 @@ flask
 python-dotenv
 gTTS
 apscheduler
+psycopg2-binary
