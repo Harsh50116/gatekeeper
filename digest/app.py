@@ -2,6 +2,9 @@ import logging
 import re
 import threading
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, request, redirect, url_for
 
 from .sources import CATEGORIES
@@ -14,6 +17,7 @@ from .mailer import send_digest_email
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+init_db()
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
