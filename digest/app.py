@@ -11,11 +11,10 @@ from flask import Flask, render_template, request, redirect, url_for
 
 from .sources import CATEGORIES
 from .store import init_db, register_user, get_user_items
-from .summarizer import build_user_digest, summarize_category, clear_cache
+from .summarizer import build_user_digest, clear_cache
 from .tts import generate_audio
 from .storage import upload_audio
 from .mailer import send_digest_email
-from .image_gen import generate_daily_cover
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +64,6 @@ def _send_welcome_digest(user_id: str, email: str):
             logger.info("No items yet for %s, skipping welcome digest", email)
             return
 
-        category_summaries = {}
-        for cat, cat_items in items.items():
-            category_summaries[cat] = summarize_category(cat, cat_items)
-
-        cover_url = generate_daily_cover(category_summaries)
-
         digest_text = build_user_digest(items)
         if not digest_text:
             logger.warning("Empty digest for %s", email)
@@ -81,7 +74,7 @@ def _send_welcome_digest(user_id: str, email: str):
 
         app_url = os.environ.get("APP_URL", "http://localhost:8080")
         cats = ",".join(items.keys())
-        player_url = f"{app_url}/play?audio={audio_url}&cats={cats}&cover={cover_url}"
+        player_url = f"{app_url}/play?audio={audio_url}&cats={cats}"
         send_digest_email(email, player_url)
         logger.info("Welcome digest sent to %s", email)
     except Exception:
@@ -92,7 +85,6 @@ def _send_welcome_digest(user_id: str, email: str):
 def player():
     audio_url = request.args.get("audio", "")
     cats = request.args.get("cats", "")
-    cover_url = request.args.get("cover", "")
     date_str = request.args.get("date", datetime.now(timezone.utc).strftime("%A, %B %d").upper())
     categories = [c.strip() for c in cats.split(",") if c.strip()]
 
@@ -108,7 +100,6 @@ def player():
     return render_template(
         "player.html",
         audio_url=audio_url,
-        cover_url=cover_url,
         categories=category_labels,
         date_display=date_str,
     )
