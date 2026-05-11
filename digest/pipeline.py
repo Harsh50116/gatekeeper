@@ -7,13 +7,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .main import run as run_scraper
-from .store import get_all_users, get_user_items
-from .summarizer import build_user_digest, clear_cache
+from .store import get_all_users, get_user_items, get_all_recent_items
+from .summarizer import build_user_digest, summarize_category, clear_cache
 from .tts import generate_audio, cleanup_old_audio
 from .storage import upload_audio, delete_audio
 from .mailer import send_digest_email
+from .image_gen import generate_daily_cover
 
 logger = logging.getLogger(__name__)
+
+APP_URL = os.environ.get("APP_URL", "http://localhost:8080")
 
 
 def run_pipeline():
@@ -26,8 +29,16 @@ def run_pipeline():
     logger.info("Step 2: Scraping fresh data")
     asyncio.run(run_scraper())
 
+    logger.info("Step 3: Generating daily cover image")
+    all_items = get_all_recent_items()
+    category_summaries = {}
+    for cat, items in all_items.items():
+        category_summaries[cat] = summarize_category(cat, items)
+    cover_url = generate_daily_cover(category_summaries)
+    logger.info("Cover URL: %s", cover_url or "(none)")
+
     users = get_all_users()
-    logger.info("Step 3: Processing %d users", len(users))
+    logger.info("Step 4: Processing %d users", len(users))
 
     results = []
     for user in users:
@@ -48,12 +59,14 @@ def run_pipeline():
             continue
 
         audio_path = generate_audio(digest_text, email)
-        public_url = upload_audio(audio_path)
+        audio_url = upload_audio(audio_path)
 
-        send_digest_email(email, public_url)
+        cats = ",".join(items.keys())
+        player_url = f"{APP_URL}/play?audio={audio_url}&cats={cats}&cover={cover_url}"
+        send_digest_email(email, player_url)
 
-        results.append({"email": email, "url": public_url})
-        logger.info("  Done: %s", public_url)
+        results.append({"email": email, "url": player_url})
+        logger.info("  Done: %s", player_url)
 
     clear_cache()
 

@@ -122,6 +122,32 @@ def get_all_users() -> list[dict]:
     ]
 
 
+def get_all_recent_items() -> dict[str, list[dict]]:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT title, summary, url, source, category, published
+        FROM items
+        WHERE published >= %s
+        ORDER BY category, published DESC
+    """, (cutoff,))
+    rows = cur.fetchall()
+    conn.close()
+
+    items_by_category: dict[str, list[dict]] = {}
+    for r in rows:
+        cat = r["category"]
+        items_by_category.setdefault(cat, []).append({
+            "title": r["title"],
+            "summary": r["summary"],
+            "url": r["url"],
+            "source": r["source"],
+            "published": r["published"],
+        })
+    return items_by_category
+
+
 def get_user_items(user_id: str) -> dict[str, list[dict]]:
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     conn = get_connection()
