@@ -3,6 +3,7 @@ import re
 import threading
 from datetime import datetime, timezone
 
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -69,8 +70,12 @@ def _send_welcome_digest(user_id: str, email: str):
             return
 
         audio_path = generate_audio(digest_text, email)
-        public_url = upload_audio(audio_path)
-        send_digest_email(email, public_url)
+        audio_url = upload_audio(audio_path)
+
+        app_url = os.environ.get("APP_URL", "http://localhost:8080")
+        cats = ",".join(items.keys())
+        player_url = f"{app_url}/play?audio={audio_url}&cats={cats}"
+        send_digest_email(email, player_url)
         logger.info("Welcome digest sent to %s", email)
     except Exception:
         logger.exception("Failed to send welcome digest to %s", email)

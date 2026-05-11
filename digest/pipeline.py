@@ -15,6 +15,8 @@ from .mailer import send_digest_email
 
 logger = logging.getLogger(__name__)
 
+APP_URL = os.environ.get("APP_URL", "http://localhost:8080")
+
 
 def run_pipeline():
     start = time.time()
@@ -48,11 +50,13 @@ def run_pipeline():
             continue
 
         audio_path = generate_audio(digest_text, email)
-        public_url = upload_audio(audio_path)
+        audio_url = upload_audio(audio_path)
 
-        send_digest_email(email, public_url)
+        cats = ",".join(items.keys())
+        player_url = f"{APP_URL}/play?audio={audio_url}&cats={cats}"
+        send_digest_email(email, player_url)
 
-        results.append({"email": email, "url": public_url})
+        results.append({"email": email, "url": player_url})
         logger.info("  Done: %s", public_url)
 
     clear_cache()
