@@ -262,9 +262,13 @@
 
         <div class="cover-wrapper">
             <div class="cover">
-                <div class="cover-placeholder">
-                    <div class="orb"></div>
-                </div>
+                {% if cover_url %}
+                    <img src="{{ cover_url }}" alt="Daily cover">
+                {% else %}
+                    <div class="cover-placeholder">
+                        <div class="orb"></div>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
