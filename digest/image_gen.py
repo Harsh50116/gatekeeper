@@ -1,16 +1,15 @@
-import base64
 import logging
 import os
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
 HYPERBOLIC_CHAT_URL = "https://api.hyperbolic.xyz/v1/chat/completions"
-HYPERBOLIC_IMAGE_URL = "https://api.hyperbolic.xyz/v1/image/generation"
 CHAT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
-IMAGE_MODEL = "FLUX.1-dev"
+POLLINATIONS_URL = "https://image.pollinations.ai/prompt"
 
 PROMPT_SYSTEM = """You write image-generation prompts. Given today's news themes, \
 write ONE prompt (under 60 words) for an abstract editorial cover image. \
@@ -65,23 +64,10 @@ def _build_image_prompt(category_summaries: dict[str, str]) -> str:
 
 
 def _generate_image(prompt: str) -> bytes:
-    resp = httpx.post(
-        HYPERBOLIC_IMAGE_URL,
-        headers={"Authorization": f"Bearer {_api_key()}"},
-        json={
-            "model_name": IMAGE_MODEL,
-            "prompt": prompt,
-            "height": 1024,
-            "width": 1024,
-            "steps": "25",
-            "cfg_scale": "5",
-            "backend": "auto",
-        },
-        timeout=120.0,
-    )
+    url = f"{POLLINATIONS_URL}/{quote(prompt)}?width=1024&height=1024&nologo=true"
+    resp = httpx.get(url, timeout=120.0, follow_redirects=True)
     resp.raise_for_status()
-    b64_data = resp.json()["images"][0]["image"]
-    return base64.b64decode(b64_data)
+    return resp.content
 
 
 def _upload_cover(image_data: bytes, date_str: str) -> str:
