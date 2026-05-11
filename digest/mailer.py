@@ -1,21 +1,20 @@
 import logging
 import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
-SMTP_HOST = os.environ.get("SMTP_HOST", "smtp-relay.brevo.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_LOGIN = os.environ.get("SMTP_LOGIN", "")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-FROM_EMAIL = os.environ.get("FROM_EMAIL", SMTP_LOGIN)
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+FROM_EMAIL = os.environ.get("FROM_EMAIL", "")
 
 
 def send_digest_email(to_email: str, player_url: str) -> None:
-    if not SMTP_LOGIN or not SMTP_PASSWORD:
-        raise RuntimeError("SMTP_LOGIN and SMTP_PASSWORD must be set")
+    if not BREVO_API_KEY:
+        raise RuntimeError("BREVO_API_KEY not set in environment")
+    if not FROM_EMAIL:
+        raise RuntimeError("FROM_EMAIL not set in environment")
 
     html = (
         '<div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">'
@@ -30,15 +29,21 @@ def send_digest_email(to_email: str, player_url: str) -> None:
         '</div>'
     )
 
-    msg = MIMEMultipart("alternative")
-    msg["From"] = FROM_EMAIL
-    msg["To"] = to_email
-    msg["Subject"] = "Your Morning Briefing is ready"
-    msg.attach(MIMEText(html, "html"))
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_LOGIN, SMTP_PASSWORD)
-        server.sendmail(FROM_EMAIL, to_email, msg.as_string())
-
-    logger.info("Email sent to %s", to_email)
+    resp = httpx.post(
+        BREVO_URL,
+        headers={
+            "api-key": BREVO_API_KEY,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        json={
+            "sender": {"email": FROM_EMAIL},
+            "to": [{"email": to_email}],
+            "subject": "Your Morning Briefing is ready",
+            "htmlContent": html,
+        },
+        timeout=30.0,
+    )
+    resp.raise_for_status()
+    msg_id = resp.json().get("messageId", "")
+    logger.info("Email sent to %s (id: %s)", to_email, msg_id)
