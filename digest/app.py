@@ -1,6 +1,7 @@
 import logging
 import re
 import threading
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -73,6 +74,30 @@ def _send_welcome_digest(user_id: str, email: str):
         logger.info("Welcome digest sent to %s", email)
     except Exception:
         logger.exception("Failed to send welcome digest to %s", email)
+
+
+@app.route("/play")
+def player():
+    audio_url = request.args.get("audio", "")
+    cats = request.args.get("cats", "")
+    date_str = request.args.get("date", datetime.now(timezone.utc).strftime("%A, %B %d").upper())
+    categories = [c.strip() for c in cats.split(",") if c.strip()]
+
+    display_names = {
+        "tech_ai": "Tech & AI",
+        "business_markets": "Markets",
+        "sports": "Sports",
+        "world_news": "World News",
+        "science": "Science",
+    }
+    category_labels = [display_names.get(c, c.replace("_", " ").title()) for c in categories]
+
+    return render_template(
+        "player.html",
+        audio_url=audio_url,
+        categories=category_labels,
+        date_display=date_str,
+    )
 
 
 @app.route("/success")

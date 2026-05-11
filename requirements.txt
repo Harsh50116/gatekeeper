@@ -3,7 +3,7 @@ httpx
 yfinance
 flask
 python-dotenv
-gTTS
+edge-tts
 apscheduler
 psycopg2-binary
 gunicorn

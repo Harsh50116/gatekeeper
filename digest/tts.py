@@ -1,12 +1,20 @@
+import asyncio
 import logging
 import os
 from datetime import datetime, timezone
 
-from gtts import gTTS
+import edge_tts
 
 logger = logging.getLogger(__name__)
 
 AUDIO_DIR = os.path.join(os.path.dirname(__file__), "audio")
+VOICE = os.environ.get("TTS_VOICE", "en-US-GuyNeural")
+RATE = os.environ.get("TTS_RATE", "+0%")
+
+
+async def _generate(text: str, path: str):
+    communicate = edge_tts.Communicate(text, VOICE, rate=RATE)
+    await communicate.save(path)
 
 
 def generate_audio(text: str, email: str) -> str:
@@ -16,8 +24,7 @@ def generate_audio(text: str, email: str) -> str:
     filename = f"{safe_email}_{date_str}.mp3"
     path = os.path.join(AUDIO_DIR, filename)
 
-    tts = gTTS(text=text, lang="en")
-    tts.save(path)
+    asyncio.run(_generate(text, path))
     logger.info("Audio saved: %s", path)
     return path
 
