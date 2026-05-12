@@ -10,7 +10,7 @@ load_dotenv()
 from flask import Flask, render_template, request, redirect, url_for
 
 from .sources import CATEGORIES
-from .store import init_db, register_user, get_user_items
+from .store import init_db, register_user, get_user_items, save_digest
 from .summarizer import build_user_digest, clear_cache
 from .tts import generate_audio
 from .storage import upload_audio
@@ -69,6 +69,7 @@ def _send_welcome_digest(user_id: str, email: str):
             logger.warning("Empty digest for %s", email)
             return
 
+        save_digest(user_id, digest_text)
         audio_path = generate_audio(digest_text, email)
         audio_url = upload_audio(audio_path)
 

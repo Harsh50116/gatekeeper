@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .main import run as run_scraper
-from .store import get_all_users, get_user_items
+from .store import get_all_users, get_user_items, get_previous_digest, save_digest
 from .summarizer import build_user_digest, clear_cache
 from .tts import generate_audio, cleanup_old_audio
 from .storage import upload_audio, delete_audio
@@ -44,11 +44,13 @@ def run_pipeline():
             total_items = sum(len(v) for v in items.values())
             logger.info("  %d items across %d categories", total_items, len(items))
 
-            digest_text = build_user_digest(items)
+            previous = get_previous_digest(user["id"])
+            digest_text = build_user_digest(items, previous)
             if not digest_text:
                 logger.warning("  Empty digest for %s, skipping", email)
                 continue
 
+            save_digest(user["id"], digest_text)
             audio_path = generate_audio(digest_text, email)
             audio_url = upload_audio(audio_path)
 

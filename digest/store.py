@@ -50,6 +50,16 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS digest_history (
+            user_id     TEXT NOT NULL,
+            digest_date TEXT NOT NULL,
+            digest_text TEXT NOT NULL,
+            created_at  TEXT NOT NULL,
+            PRIMARY KEY (user_id, digest_date),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -146,6 +156,33 @@ def get_all_recent_items() -> dict[str, list[dict]]:
             "published": r["published"],
         })
     return items_by_category
+
+
+def save_digest(user_id: str, digest_text: str) -> None:
+    conn = get_connection()
+    cur = conn.cursor()
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now = datetime.now(timezone.utc).isoformat()
+    cur.execute(
+        "INSERT INTO digest_history (user_id, digest_date, digest_text, created_at) "
+        "VALUES (%s, %s, %s, %s) ON CONFLICT (user_id, digest_date) DO UPDATE SET digest_text = %s",
+        (user_id, today, digest_text, now, digest_text),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_previous_digest(user_id: str) -> str | None:
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT digest_text FROM digest_history WHERE user_id = %s AND digest_date = %s",
+        (user_id, yesterday),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row[0] if row else None
 
 
 def get_user_items(user_id: str) -> dict[str, list[dict]]:
