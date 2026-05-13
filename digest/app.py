@@ -10,7 +10,7 @@ load_dotenv()
 from flask import Flask, render_template, request, redirect, url_for
 
 from .sources import CATEGORIES
-from .store import init_db, register_user, get_user_items, save_digest
+from .store import register_user, get_user_items, save_digest
 from .summarizer import build_user_digest, clear_cache
 from .tts import generate_audio
 from .storage import upload_audio
@@ -19,7 +19,6 @@ from .mailer import send_digest_email
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-init_db()
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -116,5 +115,4 @@ def success():
 if __name__ == "__main__":
     import sys
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
-    init_db()
     app.run(debug=True, port=port)

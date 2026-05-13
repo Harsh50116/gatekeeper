@@ -5,7 +5,7 @@ import time
 import httpx
 
 from .sources import SOURCES
-from .store import init_db, insert_items
+from .store import insert_items
 from .fetcher import fetch_source, TIMEOUT
 
 logging.basicConfig(
@@ -32,7 +32,6 @@ async def scrape_category(client: httpx.AsyncClient, category: str, sources: lis
 
 
 async def run():
-    init_db()
     start = time.time()
 
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as client:

@@ -16,52 +16,10 @@ def get_connection():
     return conn
 
 
-def init_db():
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS items (
-            id          TEXT PRIMARY KEY,
-            category    TEXT NOT NULL,
-            title       TEXT NOT NULL,
-            summary     TEXT,
-            url         TEXT NOT NULL,
-            published   TEXT NOT NULL,
-            source      TEXT NOT NULL,
-            fetched_at  TEXT NOT NULL
-        )
-    """)
-    cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_items_category_published
-            ON items (category, published)
-    """)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id          TEXT PRIMARY KEY,
-            email       TEXT NOT NULL UNIQUE,
-            created_at  TEXT NOT NULL
-        )
-    """)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS user_categories (
-            user_id   TEXT NOT NULL,
-            category  TEXT NOT NULL,
-            PRIMARY KEY (user_id, category),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    """)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS digest_history (
-            user_id     TEXT NOT NULL,
-            digest_date TEXT NOT NULL,
-            digest_text TEXT NOT NULL,
-            created_at  TEXT NOT NULL,
-            PRIMARY KEY (user_id, digest_date),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    """)
-    conn.commit()
-    conn.close()
+# Schema lives in migrations/*.sql, not here. Apply with `make db-init` (local)
+# or `psql "<DB_CONNECTION_STRING>" -f migrations/0001_initial.sql` (staging/prod).
+# The previous in-code init_db() was removed to prevent local dev from silently
+# creating tables in shared cloud DBs.
 
 
 def insert_items(items: list[dict]) -> int:

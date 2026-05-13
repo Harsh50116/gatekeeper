@@ -29,11 +29,8 @@ def main():
         misfire_grace_time=3600,
     )
 
-    logger.info("Scheduler started. Pipeline runs daily at %02d:%02d", SCHEDULE_HOUR, SCHEDULE_MINUTE)
-    logger.info("Running pipeline now for immediate results...")
-    run_pipeline()
-
-    logger.info("Waiting for next scheduled run...")
+    logger.info("Scheduler started. Pipeline runs daily at %02d:%02d UTC.", SCHEDULE_HOUR, SCHEDULE_MINUTE)
+    logger.info("No startup run — pipeline only fires on schedule. For a manual run, use: python -m digest.pipeline")
     scheduler.start()
 
 
