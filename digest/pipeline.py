@@ -7,13 +7,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .main import run as run_scraper
-from .store import get_all_users, get_user_items
+from .store import get_all_users, get_user_items, get_previous_digest, save_digest
 from .summarizer import build_user_digest, clear_cache
 from .tts import generate_audio, cleanup_old_audio
 from .storage import upload_audio, delete_audio
 from .mailer import send_digest_email
 
 logger = logging.getLogger(__name__)
+
+APP_URL = os.environ.get("APP_URL", "http://localhost:8080")
 
 
 def run_pipeline():
@@ -33,27 +35,33 @@ def run_pipeline():
     for user in users:
         email = user["email"]
         logger.info("Processing user: %s", email)
+        try:
+            items = get_user_items(user["id"])
+            if not items:
+                logger.info("No items for %s, skipping", email)
+                continue
 
-        items = get_user_items(user["id"])
-        if not items:
-            logger.info("No items for %s, skipping", email)
-            continue
+            total_items = sum(len(v) for v in items.values())
+            logger.info("  %d items across %d categories", total_items, len(items))
 
-        total_items = sum(len(v) for v in items.values())
-        logger.info("  %d items across %d categories", total_items, len(items))
+            previous = get_previous_digest(user["id"])
+            digest_text = build_user_digest(items, previous)
+            if not digest_text:
+                logger.warning("  Empty digest for %s, skipping", email)
+                continue
 
-        digest_text = build_user_digest(items)
-        if not digest_text:
-            logger.warning("  Empty digest for %s, skipping", email)
-            continue
+            save_digest(user["id"], digest_text)
+            audio_path = generate_audio(digest_text, email)
+            audio_url = upload_audio(audio_path)
 
-        audio_path = generate_audio(digest_text, email)
-        public_url = upload_audio(audio_path)
+            cats = ",".join(items.keys())
+            player_url = f"{APP_URL}/play?audio={audio_url}&cats={cats}"
+            send_digest_email(email, player_url)
 
-        send_digest_email(email, public_url)
-
-        results.append({"email": email, "url": public_url})
-        logger.info("  Done: %s", public_url)
+            results.append({"email": email, "url": player_url})
+            logger.info("  Done: %s", player_url)
+        except Exception:
+            logger.exception("Failed to process user %s, continuing", email)
 
     clear_cache()
 

@@ -1,14 +1,16 @@
 import logging
 import re
 import threading
+from datetime import datetime, timezone
 
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
 from flask import Flask, render_template, request, redirect, url_for
 
 from .sources import CATEGORIES
-from .store import init_db, register_user, get_user_items
+from .store import register_user, get_user_items, save_digest
 from .summarizer import build_user_digest, clear_cache
 from .tts import generate_audio
 from .storage import upload_audio
@@ -17,7 +19,6 @@ from .mailer import send_digest_email
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-init_db()
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -67,12 +68,41 @@ def _send_welcome_digest(user_id: str, email: str):
             logger.warning("Empty digest for %s", email)
             return
 
+        save_digest(user_id, digest_text)
         audio_path = generate_audio(digest_text, email)
-        public_url = upload_audio(audio_path)
-        send_digest_email(email, public_url)
+        audio_url = upload_audio(audio_path)
+
+        app_url = os.environ.get("APP_URL", "http://localhost:8080")
+        cats = ",".join(items.keys())
+        player_url = f"{app_url}/play?audio={audio_url}&cats={cats}"
+        send_digest_email(email, player_url)
         logger.info("Welcome digest sent to %s", email)
     except Exception:
         logger.exception("Failed to send welcome digest to %s", email)
+
+
+@app.route("/play")
+def player():
+    audio_url = request.args.get("audio", "")
+    cats = request.args.get("cats", "")
+    date_str = request.args.get("date", datetime.now(timezone.utc).strftime("%A, %B %d").upper())
+    categories = [c.strip() for c in cats.split(",") if c.strip()]
+
+    display_names = {
+        "tech_ai": "Tech & AI",
+        "business_markets": "Markets",
+        "sports": "Sports",
+        "world_news": "World News",
+        "science": "Science",
+    }
+    category_labels = [display_names.get(c, c.replace("_", " ").title()) for c in categories]
+
+    return render_template(
+        "player.html",
+        audio_url=audio_url,
+        categories=category_labels,
+        date_display=date_str,
+    )
 
 
 @app.route("/success")
@@ -85,5 +115,4 @@ def success():
 if __name__ == "__main__":
     import sys
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
-    init_db()
     app.run(debug=True, port=port)

@@ -94,10 +94,12 @@ Rules:
 - Spell out all numbers: write "twenty percent" not "20%", "three hundred million" not "300M".
 - Spell out common acronyms on first use unless universally known (AI, NBA, NFL are fine).
 - No "firstly", "secondly", "lastly", "in conclusion" or similar structural language.
-- Write complete flowing paragraphs meant to be read aloud."""
+- Write complete flowing paragraphs meant to be read aloud.
+- Where stories relate to each other, connect them naturally (e.g. cause and effect, broader trend, same event).
+- If a previous briefing is provided, do NOT repeat those stories. If a story is a continuation of something covered previously, briefly reference it for context (e.g. "the summit we talked about yesterday wrapped up with...") before covering the new development."""
 
 
-def generate_digest(category_summaries: dict[str, str]) -> str:
+def generate_digest(category_summaries: dict[str, str], previous_digest: str | None = None) -> str:
     combined = ""
     for cat, summary in category_summaries.items():
         if summary:
@@ -106,7 +108,10 @@ def generate_digest(category_summaries: dict[str, str]) -> str:
     if not combined.strip():
         return ""
 
-    prompt = f"Here are today's news summaries by category. Combine them into a single spoken morning briefing:\n\n{combined}"
+    prompt = "Here are today's news summaries by category. Combine them into a single spoken morning briefing:\n\n" + combined
+
+    if previous_digest:
+        prompt += f"---\nYesterday's briefing (for reference — do NOT repeat, but link continuing stories where relevant):\n\n{previous_digest}\n"
 
     digest = _call_llm(PASS2_SYSTEM, prompt)
 
@@ -124,12 +129,12 @@ def generate_digest(category_summaries: dict[str, str]) -> str:
     return digest
 
 
-def build_user_digest(user_items: dict[str, list[dict]]) -> str:
+def build_user_digest(user_items: dict[str, list[dict]], previous_digest: str | None = None) -> str:
     category_summaries = {}
     for category, items in user_items.items():
         category_summaries[category] = summarize_category(category, items)
 
-    return generate_digest(category_summaries)
+    return generate_digest(category_summaries, previous_digest)
 
 
 def clear_cache():
