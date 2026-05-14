@@ -7,3 +7,5 @@ edge-tts
 apscheduler
 psycopg2-binary
 gunicorn
+redis
+groq

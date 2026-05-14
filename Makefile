@@ -1,4 +1,4 @@
-.PHONY: help db-up db-down db-init db-reset db-psql db-status
+.PHONY: help db-up db-down db-init db-reset db-psql db-status redis-cli
 
 help:
 	@echo "Local DB targets (Docker Postgres on localhost:5432/gatekeeper):"
@@ -35,3 +35,6 @@ db-psql:
 
 db-status:
 	docker compose ps
+
+redis-cli:
+	docker compose exec redis redis-cli
