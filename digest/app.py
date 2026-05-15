@@ -61,28 +61,36 @@ def register():
 
 def _send_welcome_digest(user_id: str, email: str):
     try:
+        print(f"[DIGEST] Starting welcome digest for {email}")
         items = get_user_items(user_id)
         if not items:
-            logger.info("No items yet for %s, skipping welcome digest", email)
+            print(f"[DIGEST] No items yet for {email}, skipping")
             return
 
+        print(f"[DIGEST] Got {len(items)} categories, building digest...")
         digest_text = build_user_digest(items)
         if not digest_text:
-            logger.warning("Empty digest for %s", email)
+            print(f"[DIGEST] Empty digest for {email}")
             return
 
+        print(f"[DIGEST] Saving digest to history...")
         save_digest(user_id, digest_text)
+        print(f"[DIGEST] Generating audio...")
         audio_path = generate_audio(digest_text, email)
+        print(f"[DIGEST] Uploading audio...")
         audio_url = upload_audio(audio_path)
 
         app_url = os.environ.get("APP_URL", "http://localhost:8080")
         cats = ",".join(items.keys())
         date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         player_url = f"{app_url}/play?audio={audio_url}&cats={cats}&user={user_id}&date={date_str}"
+        print(f"[DIGEST] Sending email...")
         send_digest_email(email, player_url)
-        logger.info("Welcome digest sent to %s", email)
-    except Exception:
-        logger.exception("Failed to send welcome digest to %s", email)
+        print(f"[DIGEST] Done — welcome digest sent to {email}")
+    except Exception as e:
+        print(f"[DIGEST] FAILED for {email}: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @app.route("/play")
