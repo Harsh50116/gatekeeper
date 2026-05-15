@@ -11,7 +11,9 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from .sources import CATEGORIES
 from .store import register_user, get_user_items, save_digest, get_digest_by_date
-from .session import create_session, destroy_session
+from .session import create_session, destroy_session, get_session
+from .interactive import handle_question
+from .tts import generate_response_audio
 from .summarizer import build_user_digest, clear_cache
 from .tts import generate_audio
 from .storage import upload_audio
@@ -125,9 +127,41 @@ def session_create():
     return jsonify({"session_id": session_id})
 
 
-@app.route("/session", methods=["DELETE"])
+@app.route("/ask", methods=["POST"])
+def ask():
+    session_id = request.form.get("session_id", "")
+    if not session_id:
+        return jsonify({"error": "session_id required"}), 400
+
+    if get_session(session_id) is None:
+        return jsonify({"error": "Session not found or expired"}), 404
+
+    audio_file = request.files.get("audio")
+    if not audio_file:
+        return jsonify({"error": "audio file required"}), 400
+
+    audio_bytes = audio_file.read()
+    filename = audio_file.filename or "audio.webm"
+
+    from .transcribe import transcribe
+    question = transcribe(audio_bytes, filename)
+    if not question:
+        return jsonify({"error": "Could not transcribe audio"}), 400
+
+    result = handle_question(session_id, question)
+
+    response_audio = generate_response_audio(result["answer"])
+
+    return jsonify({
+        "audio": response_audio,
+        "question": result["question"],
+        "answer": result["answer"],
+    })
+
+
+@app.route("/session/destroy", methods=["POST"])
 def session_destroy():
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data or not data.get("session_id"):
         return jsonify({"error": "session_id required"}), 400
 
