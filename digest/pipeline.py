@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import time
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -55,7 +56,8 @@ def run_pipeline():
             audio_url = upload_audio(audio_path)
 
             cats = ",".join(items.keys())
-            player_url = f"{APP_URL}/play?audio={audio_url}&cats={cats}"
+            date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            player_url = f"{APP_URL}/play?audio={audio_url}&cats={cats}&user={user['id']}&date={date_str}"
             send_digest_email(email, player_url)
 
             results.append({"email": email, "url": player_url})

@@ -143,6 +143,18 @@ def get_previous_digest(user_id: str) -> str | None:
     return row[0] if row else None
 
 
+def get_digest_by_date(user_id: str, digest_date: str) -> str | None:
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT digest_text FROM digest_history WHERE user_id = %s AND digest_date = %s",
+        (user_id, digest_date),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
 def get_user_items(user_id: str) -> dict[str, list[dict]]:
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     conn = get_connection()

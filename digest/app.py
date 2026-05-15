@@ -7,10 +7,11 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from .sources import CATEGORIES
-from .store import register_user, get_user_items, save_digest
+from .store import register_user, get_user_items, save_digest, get_digest_by_date
+from .session import create_session, destroy_session
 from .summarizer import build_user_digest, clear_cache
 from .tts import generate_audio
 from .storage import upload_audio
@@ -74,7 +75,8 @@ def _send_welcome_digest(user_id: str, email: str):
 
         app_url = os.environ.get("APP_URL", "http://localhost:8080")
         cats = ",".join(items.keys())
-        player_url = f"{app_url}/play?audio={audio_url}&cats={cats}"
+        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        player_url = f"{app_url}/play?audio={audio_url}&cats={cats}&user={user_id}&date={date_str}"
         send_digest_email(email, player_url)
         logger.info("Welcome digest sent to %s", email)
     except Exception:
@@ -85,7 +87,9 @@ def _send_welcome_digest(user_id: str, email: str):
 def player():
     audio_url = request.args.get("audio", "")
     cats = request.args.get("cats", "")
-    date_str = request.args.get("date", datetime.now(timezone.utc).strftime("%A, %B %d").upper())
+    user_id = request.args.get("user", "")
+    digest_date = request.args.get("date", "")
+    date_display = datetime.now(timezone.utc).strftime("%A, %B %d").upper()
     categories = [c.strip() for c in cats.split(",") if c.strip()]
 
     display_names = {
@@ -101,8 +105,34 @@ def player():
         "player.html",
         audio_url=audio_url,
         categories=category_labels,
-        date_display=date_str,
+        date_display=date_display,
+        user_id=user_id,
+        digest_date=digest_date,
     )
+
+
+@app.route("/session", methods=["POST"])
+def session_create():
+    data = request.get_json()
+    if not data or not data.get("user_id") or not data.get("digest_date"):
+        return jsonify({"error": "user_id and digest_date required"}), 400
+
+    digest_text = get_digest_by_date(data["user_id"], data["digest_date"])
+    if not digest_text:
+        return jsonify({"error": "Digest not found"}), 404
+
+    session_id = create_session(digest_text)
+    return jsonify({"session_id": session_id})
+
+
+@app.route("/session", methods=["DELETE"])
+def session_destroy():
+    data = request.get_json()
+    if not data or not data.get("session_id"):
+        return jsonify({"error": "session_id required"}), 400
+
+    destroy_session(data["session_id"])
+    return jsonify({"ok": True})
 
 
 @app.route("/success")

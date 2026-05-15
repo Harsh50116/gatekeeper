@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import io
 import logging
 import os
 from datetime import datetime, timezone
@@ -27,6 +29,22 @@ def generate_audio(text: str, email: str) -> str:
     asyncio.run(_generate(text, path))
     logger.info("Audio saved: %s", path)
     return path
+
+
+async def _generate_bytes(text: str) -> bytes:
+    communicate = edge_tts.Communicate(text, VOICE, rate=RATE)
+    buffer = io.BytesIO()
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            buffer.write(chunk["data"])
+    return buffer.getvalue()
+
+
+def generate_response_audio(text: str) -> str:
+    audio_bytes = asyncio.run(_generate_bytes(text))
+    encoded = base64.b64encode(audio_bytes).decode("utf-8")
+    logger.info("Response audio generated: %d bytes", len(audio_bytes))
+    return encoded
 
 
 def cleanup_old_audio(keep_date: str | None = None):
