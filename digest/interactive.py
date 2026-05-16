@@ -53,13 +53,13 @@ def generate_search_query(question: str, digest: str, context: str) -> str:
     return _call_llm(SEARCH_QUERY_SYSTEM, user_prompt)
 
 
-ANSWER_SYSTEM = """You are a helpful audio news assistant. The user is listening to a morning news digest and asked a follow-up question. Using the search results provided, give a clear, conversational answer meant to be spoken aloud.
+ANSWER_SYSTEM = """You are a concise audio news assistant. The user asked a follow-up while listening to their morning digest. Answer using the search results provided.
 
 Rules:
-- Keep it to 2-4 sentences, concise and informative.
-- Write as if speaking — no markdown, no bullet points, no links.
+- Maximum 2 sentences. Be direct — no filler, no preamble, no "Great question".
+- Write as spoken words — no markdown, no bullets, no links.
 - Spell out numbers: "twenty three" not "23".
-- If the search results don't have a clear answer, say so honestly."""
+- If the search results don't answer it, say so in one sentence."""
 
 
 def synthesize_answer(question: str, search_results: list[dict], digest: str, context: str) -> str:
