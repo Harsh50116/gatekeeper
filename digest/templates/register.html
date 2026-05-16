@@ -365,6 +365,213 @@
         </div>
     </form>
 
+    {% if show_modal %}
+    <style>
+      .modal-veil {
+        position: fixed; inset: 0; z-index: 100;
+        display: grid; place-items: center;
+        background: rgba(8, 6, 5, 0.25);
+        animation: veil-in .35s ease-out;
+      }
+      @keyframes veil-in { from { opacity: 0; } to { opacity: 1; } }
+      body.modal-open #digestForm { filter: blur(14px) brightness(0.7); transition: filter .3s ease; }
+
+      .modal {
+        width: min(580px, calc(100vw - 48px));
+        background: var(--bg);
+        border: 1px solid var(--divider);
+        border-radius: 4px;
+        box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+        position: relative;
+        animation: modal-in .45s cubic-bezier(.22,.61,.36,1);
+        overflow: hidden;
+      }
+      @keyframes modal-in {
+        from { opacity: 0; transform: translateY(12px) scale(0.985); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      .modal::before {
+        content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      }
+
+      .modal-head { padding: 36px 44px 0; }
+      .modal-body { padding: 0 44px; }
+      .modal-foot { padding: 0 44px 24px; }
+
+      .modal-close {
+        position: absolute; top: 18px; right: 18px;
+        width: 28px; height: 28px;
+        display: grid; place-items: center;
+        color: var(--text-faint); background: none; border: none; cursor: pointer;
+        border-radius: 4px; transition: color .2s, background .2s;
+      }
+      .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+
+      .eyebrow {
+        font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+        color: var(--accent);
+        display: inline-flex; align-items: center; gap: 10px;
+      }
+      .eyebrow::before { content: ""; width: 18px; height: 1px; background: var(--accent); }
+
+      .modal-title {
+        margin: 16px 0 0;
+        font-family: 'Playfair Display', Georgia, serif;
+        font-weight: 400; font-size: 38px; line-height: 1.05;
+        letter-spacing: -0.01em; color: var(--text);
+      }
+      .modal-title em { font-style: italic; color: var(--accent); }
+
+      .modal-sub {
+        margin: 12px 0 0; font-size: 13px; line-height: 1.55; color: var(--text-muted);
+        max-width: 460px;
+      }
+      .modal-sub .email-pill {
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px; padding: 1px 6px;
+        background: rgba(255,255,255,0.04); border-radius: 3px;
+      }
+
+      .rows { margin-top: 32px; position: relative; }
+      .row { padding: 20px 0; border-top: 1px solid var(--divider); }
+      .row:last-of-type { border-bottom: 1px solid var(--divider); }
+      .row-label {
+        font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
+        color: var(--text-faint); margin-bottom: 14px;
+        display: flex; align-items: baseline; justify-content: space-between;
+      }
+      .row.after .row-label { color: var(--accent); }
+      .row-label .cnt { font-size: 10px; letter-spacing: 0.18em; color: var(--text-faint); }
+      .row.after .row-label .cnt { color: var(--accent); opacity: 0.7; }
+
+      .row-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+      .chip {
+        display: inline-flex; align-items: center;
+        padding: 9px 18px; border-radius: 999px;
+        border: 1px solid var(--text-dim); background: transparent;
+        color: var(--text-faint);
+        font-family: 'Playfair Display', Georgia, serif;
+        font-size: 18px; letter-spacing: -0.005em;
+      }
+      .row.after .chip {
+        border-color: var(--accent); color: var(--accent);
+        background: rgba(196, 122, 58, 0.04);
+      }
+
+      .row-connector {
+        position: absolute; left: 50%; top: 50%;
+        transform: translate(-50%, -50%);
+        width: 28px; height: 28px; border-radius: 999px;
+        background: var(--bg); border: 1px solid var(--divider);
+        display: grid; place-items: center; color: var(--text-muted); z-index: 2;
+      }
+
+      .modal-actions {
+        margin-top: 26px;
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      }
+      .btn-secondary {
+        font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+        color: var(--text-muted); padding: 12px 4px;
+        background: none; border: none; cursor: pointer; transition: color .2s;
+      }
+      .btn-secondary:hover { color: var(--text); }
+
+      .btn-primary {
+        display: inline-flex; align-items: center; gap: 14px;
+        font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+        color: var(--text); padding: 14px 22px;
+        border: 1px solid var(--accent);
+        background: rgba(196, 122, 58, 0.08);
+        border-radius: 999px; cursor: pointer;
+        transition: background .2s, box-shadow .25s, transform .15s;
+      }
+      .btn-primary:hover {
+        background: rgba(196, 122, 58, 0.16);
+        box-shadow: 0 0 28px rgba(196, 122, 58, 0.25);
+      }
+      .btn-primary:active { transform: scale(0.98); }
+      .btn-primary .arrow { color: var(--accent); }
+
+      @media (max-width: 768px) {
+        .modal-head, .modal-body, .modal-foot { padding-left: 26px; padding-right: 26px; }
+        .modal-title { font-size: 30px; }
+        .chip { font-size: 16px; padding: 7px 14px; }
+      }
+    </style>
+
+    <div class="modal-veil" id="modalVeil">
+      <div class="modal" role="dialog" aria-modal="true">
+        <button class="modal-close" id="modalClose" aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <div class="modal-head">
+          <div class="eyebrow">Welcome back</div>
+          <h2 class="modal-title">You're <em>already in</em>.</h2>
+          <p class="modal-sub">
+            <span class="email-pill">{{ email }}</span> is already subscribed. Confirm the change to your fields below.
+          </p>
+        </div>
+
+        <div class="modal-body">
+          <div class="rows">
+            <div class="row before">
+              <div class="row-label">
+                <span>Previously</span>
+                <span class="cnt">{{ prev_categories|length }} field{{ 's' if prev_categories|length != 1 }}</span>
+              </div>
+              <div class="row-chips">
+                {% for cat in prev_categories %}
+                <span class="chip">{{ cat }}</span>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="row-connector" aria-hidden="true">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M5 1.5v7M2 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+
+            <div class="row after">
+              <div class="row-label">
+                <span>New selection</span>
+                <span class="cnt">{{ new_categories|length }} field{{ 's' if new_categories|length != 1 }}</span>
+              </div>
+              <div class="row-chips">
+                {% for cat in new_categories %}
+                <span class="chip">{{ cat }}</span>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="modal-actions">
+            <button class="btn-secondary" id="keepBtn">Keep existing</button>
+            <form method="POST" action="/register/update" style="margin:0">
+              <input type="hidden" name="user_id" value="{{ user_id }}">
+              <input type="hidden" name="email" value="{{ email }}">
+              {% for cat in selected %}
+              <input type="hidden" name="categories" value="{{ cat }}">
+              {% endfor %}
+              <button type="submit" class="btn-primary">
+                <span>Update preferences</span>
+                <span class="arrow">&rarr;</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <script>
         const checks = document.querySelectorAll('.category-check');
         const counter = document.getElementById('count');
@@ -384,6 +591,16 @@
             document.body.classList.toggle('light');
             localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark');
         });
+
+        // Modal close behavior
+        var veil = document.getElementById('modalVeil');
+        if (veil) {
+            document.body.classList.add('modal-open');
+            function closeModal() { veil.remove(); document.body.classList.remove('modal-open'); }
+            document.getElementById('modalClose').addEventListener('click', closeModal);
+            document.getElementById('keepBtn').addEventListener('click', closeModal);
+            document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && veil.parentNode) closeModal(); });
+        }
     </script>
 </body>
 </html>

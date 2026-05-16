@@ -49,6 +49,30 @@ def insert_items(items: list[dict]) -> int:
     return inserted
 
 
+def get_user_by_email(email: str) -> dict | None:
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT id, email FROM users WHERE email = %s", (email,))
+    user = cur.fetchone()
+    if not user:
+        conn.close()
+        return None
+    cur.execute("SELECT category FROM user_categories WHERE user_id = %s", (user["id"],))
+    cats = [r["category"] for r in cur.fetchall()]
+    conn.close()
+    return {"id": user["id"], "email": user["email"], "categories": cats}
+
+
+def update_user_categories(user_id: str, categories: list[str]) -> None:
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM user_categories WHERE user_id = %s", (user_id,))
+    for cat in categories:
+        cur.execute("INSERT INTO user_categories (user_id, category) VALUES (%s, %s)", (user_id, cat))
+    conn.commit()
+    conn.close()
+
+
 def register_user(email: str, categories: list[str]) -> str:
     conn = get_connection()
     cur = conn.cursor()

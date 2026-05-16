@@ -10,7 +10,7 @@ load_dotenv()
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from .sources import CATEGORIES
-from .store import register_user, get_user_items, save_digest, get_digest_by_date
+from .store import register_user, get_user_items, save_digest, get_digest_by_date, get_user_by_email, update_user_categories
 from .session import create_session, destroy_session, get_session
 from .interactive import handle_question
 from .tts import generate_response_audio
@@ -45,10 +45,53 @@ def register():
     if error:
         return render_template("register.html", categories=CATEGORIES, error=error, email=email, selected=selected)
 
+    existing = get_user_by_email(email)
+    if existing:
+        display_names = {
+            "tech_ai": "Tech & AI",
+            "business_markets": "Business & Markets",
+            "sports": "Sports",
+            "world_news": "World News",
+            "science": "Science",
+        }
+        prev_labels = [display_names.get(c, c.replace("_", " ").title()) for c in existing["categories"]]
+        new_labels = [display_names.get(c, c.replace("_", " ").title()) for c in selected]
+        return render_template(
+            "register.html",
+            categories=CATEGORIES,
+            error=None,
+            email=email,
+            selected=selected,
+            show_modal=True,
+            prev_categories=prev_labels,
+            new_categories=new_labels,
+            user_id=existing["id"],
+        )
+
     try:
         user_id = register_user(email, selected)
-    except ValueError as e:
-        return render_template("register.html", categories=CATEGORIES, error=str(e), email=email, selected=selected)
+    except ValueError:
+        return render_template("register.html", categories=CATEGORIES, error="Something went wrong. Please try again.", email=email, selected=selected)
+
+    threading.Thread(
+        target=_send_welcome_digest,
+        args=(user_id, email),
+        daemon=True,
+    ).start()
+
+    return redirect(url_for("success", email=email, cats=",".join(selected)))
+
+
+@app.route("/register/update", methods=["POST"])
+def register_update():
+    user_id = request.form.get("user_id", "").strip()
+    email = request.form.get("email", "").strip()
+    selected = request.form.getlist("categories")
+
+    if not user_id or not email or not selected:
+        return redirect(url_for("index"))
+
+    update_user_categories(user_id, selected)
 
     threading.Thread(
         target=_send_welcome_digest,
