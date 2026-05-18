@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 AUDIO_DIR = os.path.join(os.path.dirname(__file__), "audio")
 VOICE = os.environ.get("TTS_VOICE", "en-US-GuyNeural")
+VOICE_BALTO = os.environ.get("TTS_VOICE_BALTO", "en-US-AndrewNeural")
 RATE = os.environ.get("TTS_RATE", "+0%")
 
 
@@ -31,8 +32,8 @@ def generate_audio(text: str, email: str) -> str:
     return path
 
 
-async def _generate_bytes(text: str) -> bytes:
-    communicate = edge_tts.Communicate(text, VOICE, rate=RATE)
+async def _generate_bytes(text: str, voice: str = None) -> bytes:
+    communicate = edge_tts.Communicate(text, voice or VOICE_BALTO, rate=RATE)
     buffer = io.BytesIO()
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":

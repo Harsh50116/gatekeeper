@@ -19,7 +19,7 @@ def _get_client() -> Groq:
     return Groq(api_key=GROQ_API_KEY)
 
 
-def _call_llm(system: str, user: str) -> str:
+def _call_llm(system: str, user: str, max_tokens: int = 512) -> str:
     client = _get_client()
     resp = client.chat.completions.create(
         model=MODEL,
@@ -28,7 +28,7 @@ def _call_llm(system: str, user: str) -> str:
             {"role": "user", "content": user},
         ],
         temperature=0.3,
-        max_tokens=512,
+        max_tokens=max_tokens,
     )
     return resp.choices[0].message.content.strip()
 
@@ -53,13 +53,14 @@ def generate_search_query(question: str, digest: str, context: str) -> str:
     return _call_llm(SEARCH_QUERY_SYSTEM, user_prompt)
 
 
-ANSWER_SYSTEM = """You are a concise audio news assistant. The user asked a follow-up while listening to their morning digest. Answer using the search results provided.
+ANSWER_SYSTEM = """You answer follow-up questions about a news digest. You MUST reply in 1-2 sentences only. Never exceed 40 words.
 
 Rules:
-- Maximum 2 sentences. Be direct — no filler, no preamble, no "Great question".
-- Write as spoken words — no markdown, no bullets, no links.
+- Answer ONLY what was asked. No background, no context, no elaboration.
+- No preamble. Start with the answer immediately.
+- Spoken format — no markdown, no bullets, no links, no quotes.
 - Spell out numbers: "twenty three" not "23".
-- If the search results don't answer it, say so in one sentence."""
+- If unknown, say "I don't have that information" and nothing else."""
 
 
 def synthesize_answer(question: str, search_results: list[dict], digest: str, context: str) -> str:
@@ -71,7 +72,7 @@ def synthesize_answer(question: str, search_results: list[dict], digest: str, co
     if context:
         user_prompt += f"Conversation so far:\n{context}\n\n"
     user_prompt += f"User's question: {question}\n\nSearch results:\n{results_text}"
-    return _call_llm(ANSWER_SYSTEM, user_prompt)
+    return _call_llm(ANSWER_SYSTEM, user_prompt, max_tokens=100)
 
 
 SUMMARIZE_SYSTEM = """Summarize the following conversation history into a brief paragraph. Capture the key questions asked and facts learned. Be concise — this summary will be used as context for future questions."""
