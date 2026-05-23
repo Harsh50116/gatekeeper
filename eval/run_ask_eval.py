@@ -16,7 +16,7 @@ import time
 from dotenv import load_dotenv
 load_dotenv()
 
-from digest.interactive import generate_search_query, synthesize_answer, _build_context
+from digest.interactive import generate_search_query, synthesize_answer, try_digest_answer, SEARCH_NEEDED_TOKEN
 from digest.search import web_search
 from eval.rubrics.ask import run_all_checks
 
@@ -62,62 +62,98 @@ def run_fixture(fixture: dict) -> dict:
     digest = fixture["digest"]
     context = build_context_from_turns(fixture["prior_turns"])
 
-    # Layer 1 — Search query generation
-    t0 = time.time()
-    query_result = generate_search_query(question, digest, context)
-    search_query = query_result["text"]
-    l1_latency = round(time.time() - t0, 3)
+    # Step 0 — Try digest first
+    digest_check = try_digest_answer(question, digest, context)
+    digest_response = digest_check["text"]
+    used_search = SEARCH_NEEDED_TOKEN in digest_response
 
-    # Layer 2 — Retrieval
-    t0 = time.time()
-    search_results = web_search(search_query)
-    l2_latency = round(time.time() - t0, 3)
+    if used_search:
+        # Layer 1 — Search query generation
+        query_result = generate_search_query(question, digest, context)
+        search_query = query_result["text"]
 
-    # Layer 3 — Synthesis
-    t0 = time.time()
-    answer_result = synthesize_answer(question, search_results, digest, context)
-    answer = answer_result["text"]
-    l3_latency = round(time.time() - t0, 3)
+        # Layer 2 — Retrieval
+        t0 = time.time()
+        search_results = web_search(search_query)
+        l2_latency = round(time.time() - t0, 3)
 
-    # Rubric checks
-    checks = run_all_checks(search_query, question, answer)
+        # Layer 3 — Synthesis
+        answer_result = synthesize_answer(question, search_results, digest, context)
+        answer = answer_result["text"]
 
-    return {
-        "name": name,
-        "question": question,
-        "search_query": search_query,
-        "result_count": len(search_results),
-        "result_titles": [r.get("title", "") for r in search_results[:3]],
-        "answer": answer,
-        "answer_words": len(answer.split()),
-        "latency": {"query": l1_latency, "search": l2_latency, "synthesis": l3_latency, "total": round(l1_latency + l2_latency + l3_latency, 3)},
-        "tokens": {
-            "query": {"in": query_result["tokens_in"], "out": query_result["tokens_out"]},
-            "synthesis": {"in": answer_result["tokens_in"], "out": answer_result["tokens_out"]},
-        },
-        "checks": checks,
-        "expected_themes": fixture["expected_themes"],
-    }
+        checks = run_all_checks(search_query, question, answer)
+
+        total_latency = round(digest_check["latency"] + query_result["latency"] + l2_latency + answer_result["latency"], 3)
+
+        return {
+            "name": name,
+            "question": question,
+            "used_search": True,
+            "digest_check_latency": digest_check["latency"],
+            "search_query": search_query,
+            "result_count": len(search_results),
+            "result_titles": [r.get("title", "") for r in search_results[:3]],
+            "answer": answer,
+            "answer_words": len(answer.split()),
+            "latency": {"digest_check": digest_check["latency"], "query": query_result["latency"], "search": l2_latency, "synthesis": answer_result["latency"], "total": total_latency},
+            "tokens": {
+                "digest_check": {"in": digest_check["tokens_in"], "out": digest_check["tokens_out"]},
+                "query": {"in": query_result["tokens_in"], "out": query_result["tokens_out"]},
+                "synthesis": {"in": answer_result["tokens_in"], "out": answer_result["tokens_out"]},
+            },
+            "checks": checks,
+            "expected_themes": fixture["expected_themes"],
+        }
+    else:
+        answer = digest_response
+        checks = run_all_checks("DIGEST_ONLY", question, answer)
+
+        return {
+            "name": name,
+            "question": question,
+            "used_search": False,
+            "search_query": None,
+            "result_count": 0,
+            "result_titles": [],
+            "answer": answer,
+            "answer_words": len(answer.split()),
+            "latency": {"digest_check": digest_check["latency"], "total": digest_check["latency"]},
+            "tokens": {
+                "digest_check": {"in": digest_check["tokens_in"], "out": digest_check["tokens_out"]},
+            },
+            "checks": checks,
+            "expected_themes": fixture["expected_themes"],
+        }
 
 
 def print_result(result: dict):
     status = "PASS" if result["checks"]["all_passed"] else "FAIL"
+    source = "SEARCH" if result["used_search"] else "DIGEST"
     print(f"\n{'='*60}")
-    print(f"  {result['name']}  [{status}]  ({result['checks']['summary']})")
+    print(f"  {result['name']}  [{status}]  ({result['checks']['summary']})  [{source}]")
     print(f"{'='*60}")
     print(f"  Question:      {result['question']}")
-    print(f"  Search query:  {result['search_query']}")
-    print(f"  Results:       {result['result_count']} hits")
+    print(f"  Source:        {'Web search' if result['used_search'] else 'Digest only'}")
+
+    if result["used_search"]:
+        print(f"  Search query:  {result['search_query']}")
+        print(f"  Results:       {result['result_count']} hits")
+
     print(f"  Answer:        {result['answer']}")
     print(f"  Words:         {result['answer_words']}")
-    print(f"  Latency:       query={result['latency']['query']}s  search={result['latency']['search']}s  synth={result['latency']['synthesis']}s  total={result['latency']['total']}s")
-    print(f"  Tokens:        query({result['tokens']['query']['in']}→{result['tokens']['query']['out']})  synth({result['tokens']['synthesis']['in']}→{result['tokens']['synthesis']['out']})")
 
-    print(f"\n  Layer 1 checks:")
-    for c in result["checks"]["layer_1"]:
-        mark = "✓" if c["passed"] else "✗"
-        detail = f"  — {c['detail']}" if c["detail"] else ""
-        print(f"    {mark} {c['check']}{detail}")
+    lat = result["latency"]
+    if result["used_search"]:
+        print(f"  Latency:       check={lat['digest_check']}s  query={lat['query']}s  search={lat['search']}s  synth={lat['synthesis']}s  total={lat['total']}s")
+    else:
+        print(f"  Latency:       check={lat['digest_check']}s  total={lat['total']}s")
+
+    if result["used_search"]:
+        print(f"\n  Layer 1 checks:")
+        for c in result["checks"]["layer_1"]:
+            mark = "✓" if c["passed"] else "✗"
+            detail = f"  — {c['detail']}" if c["detail"] else ""
+            print(f"    {mark} {c['check']}{detail}")
 
     print(f"\n  Layer 3 checks:")
     for c in result["checks"]["layer_3"]:

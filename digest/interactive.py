@@ -52,6 +52,26 @@ def _build_context(session: dict) -> str:
     return "\n\n".join(parts)
 
 
+DIGEST_CHECK_SYSTEM = """You are a news digest assistant. The user asked a follow-up question while listening to their morning digest. Decide if the digest and conversation history contain enough information to answer the question fully and accurately.
+
+Rules:
+- If the digest or conversation history contains the specific facts needed, answer directly in 1-2 sentences (under 40 words). Follow the same spoken format rules: no markdown, no preamble, spell out numbers.
+- If the question asks for "current", "latest", "live", or "right now" data — reply SEARCH_NEEDED.
+- If the question asks for information NOT in the digest or conversation — reply SEARCH_NEEDED.
+- If the question contains a false assumption that contradicts the digest, correct it directly.
+- Reply with ONLY the answer or the word SEARCH_NEEDED. Nothing else."""
+
+SEARCH_NEEDED_TOKEN = "SEARCH_NEEDED"
+
+
+def try_digest_answer(question: str, digest: str, context: str) -> dict:
+    user_prompt = f"Digest:\n{digest}\n\n"
+    if context:
+        user_prompt += f"Conversation so far:\n{context}\n\n"
+    user_prompt += f"User's question: {question}"
+    return _call_llm(DIGEST_CHECK_SYSTEM, user_prompt, max_tokens=100)
+
+
 SEARCH_QUERY_SYSTEM = """You generate web search queries. Given a user's question and context from a news digest, produce a single concise search query that would find detailed information to answer the question. Return ONLY the search query, nothing else."""
 
 
@@ -66,11 +86,14 @@ def generate_search_query(question: str, digest: str, context: str) -> dict:
 ANSWER_SYSTEM = """You answer follow-up questions about a news digest. You MUST reply in 1-2 sentences only. Never exceed 40 words.
 
 Rules:
+- If the digest already contains the answer, use it directly. Prefer digest facts over search results.
 - Answer ONLY what was asked. No background, no context, no elaboration.
 - No preamble. Start with the answer immediately.
 - Spoken format — no markdown, no bullets, no links, no quotes.
 - Spell out numbers: "twenty three" not "23".
-- If unknown, say "I don't have that information" and nothing else."""
+- If the question contains a false assumption, correct it. For example, if the user says "Why did X acquire Y?" but that never happened, say so.
+- If genuinely unknown, say "I don't have that information" and nothing else.
+- Give exactly one answer. Never follow up with a second statement or contradiction."""
 
 
 def synthesize_answer(question: str, search_results: list[dict], digest: str, context: str) -> dict:
@@ -106,18 +129,36 @@ def handle_question(session_id: str, question: str) -> dict:
     context = _build_context(session)
     turn_index = len(session["recent_turns"]) + 1
 
-    # Layer 1 — Search query generation
-    query_result = generate_search_query(question, digest, context)
-    search_query = query_result["text"]
+    # Step 0 — Try answering from digest + conversation history first
+    digest_check = try_digest_answer(question, digest, context)
+    digest_answer = digest_check["text"]
+    used_search = False
 
-    # Layer 2 — Retrieval
-    t0 = time.time()
-    search_results = web_search(search_query)
-    search_latency = round(time.time() - t0, 3)
+    if SEARCH_NEEDED_TOKEN in digest_answer:
+        # Digest can't answer — go to search
+        used_search = True
 
-    # Layer 3 — Synthesis
-    answer_result = synthesize_answer(question, search_results, digest, context)
-    answer = answer_result["text"]
+        # Layer 1 — Search query generation
+        query_result = generate_search_query(question, digest, context)
+        search_query = query_result["text"]
+
+        # Layer 2 — Retrieval
+        t0 = time.time()
+        search_results = web_search(search_query)
+        search_latency = round(time.time() - t0, 3)
+
+        # Layer 3 — Synthesis
+        answer_result = synthesize_answer(question, search_results, digest, context)
+        answer = answer_result["text"]
+    else:
+        # Digest answered it directly
+        answer = digest_answer
+        search_query = None
+        search_results = []
+        search_latency = 0
+        query_result = None
+        answer_result = digest_check
+
     answer_word_count = len(answer.split())
 
     # Structured log
@@ -126,25 +167,40 @@ def handle_question(session_id: str, question: str) -> dict:
         "session_id": session_id,
         "turn": turn_index,
         "question": question,
-        "layer_1_query": {
+        "used_search": used_search,
+        "digest_check": {
+            "response": digest_check["text"],
+            "latency_s": digest_check["latency"],
+            "tokens_in": digest_check["tokens_in"],
+            "tokens_out": digest_check["tokens_out"],
+        },
+    }
+
+    if used_search:
+        log_entry["layer_1_query"] = {
             "generated_query": search_query,
             "latency_s": query_result["latency"],
             "tokens_in": query_result["tokens_in"],
             "tokens_out": query_result["tokens_out"],
-        },
-        "layer_2_retrieval": {
+        }
+        log_entry["layer_2_retrieval"] = {
             "result_count": len(search_results),
             "titles": [r.get("title", "") for r in search_results],
             "latency_s": search_latency,
-        },
-        "layer_3_synthesis": {
+        }
+        log_entry["layer_3_synthesis"] = {
             "answer": answer,
             "word_count": answer_word_count,
             "latency_s": answer_result["latency"],
             "tokens_in": answer_result["tokens_in"],
             "tokens_out": answer_result["tokens_out"],
-        },
-    }
+        }
+    else:
+        log_entry["digest_answer"] = {
+            "answer": answer,
+            "word_count": answer_word_count,
+        }
+
     print(f"[ASK] {json.dumps(log_entry)}")
 
     session["recent_turns"].append({"q": question, "a": answer})

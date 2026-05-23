@@ -1,0 +1,5 @@
+Good morning. In tech, Meta announced a new open-source large language model called Llama Four, trained on fifteen trillion tokens. The model is available for commercial use under a permissive license. Meanwhile, Amazon Web Services reported a forty percent year-over-year growth in its AI services division, driven by enterprise demand for custom model training.
+
+In sports, the Champions League semifinal saw Barcelona defeat Bayern Munich three to one at Camp Nou. Robert Lewandowski scored twice against his former club. The return leg is scheduled for next Tuesday in Munich.
+
+In world news, Japan and South Korea signed a new bilateral trade agreement removing tariffs on over two hundred categories of goods. The deal is expected to boost bilateral trade by eighteen percent over the next three years.
