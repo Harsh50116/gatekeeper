@@ -106,7 +106,16 @@ def run_fixture(fixture: dict) -> dict:
         }
     else:
         answer = digest_response
-        checks = run_all_checks("DIGEST_ONLY", question, answer)
+        from eval.rubrics.ask import run_layer3_checks
+        layer3 = run_layer3_checks(answer)
+        passed = sum(1 for c in layer3 if c["passed"])
+        total = len(layer3)
+        checks = {
+            "layer_1": [],
+            "layer_3": layer3,
+            "summary": f"{passed}/{total} passed",
+            "all_passed": passed == total,
+        }
 
         return {
             "name": name,
