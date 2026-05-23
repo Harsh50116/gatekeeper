@@ -1,5 +1,7 @@
+import json
 import logging
 import os
+import time
 
 from groq import Groq
 
@@ -19,8 +21,9 @@ def _get_client() -> Groq:
     return Groq(api_key=GROQ_API_KEY)
 
 
-def _call_llm(system: str, user: str, max_tokens: int = 512) -> str:
+def _call_llm(system: str, user: str, max_tokens: int = 512) -> dict:
     client = _get_client()
+    t0 = time.time()
     resp = client.chat.completions.create(
         model=MODEL,
         messages=[
@@ -30,7 +33,14 @@ def _call_llm(system: str, user: str, max_tokens: int = 512) -> str:
         temperature=0.3,
         max_tokens=max_tokens,
     )
-    return resp.choices[0].message.content.strip()
+    latency = round(time.time() - t0, 3)
+    usage = resp.usage
+    return {
+        "text": resp.choices[0].message.content.strip(),
+        "latency": latency,
+        "tokens_in": usage.prompt_tokens if usage else 0,
+        "tokens_out": usage.completion_tokens if usage else 0,
+    }
 
 
 def _build_context(session: dict) -> str:
@@ -45,7 +55,7 @@ def _build_context(session: dict) -> str:
 SEARCH_QUERY_SYSTEM = """You generate web search queries. Given a user's question and context from a news digest, produce a single concise search query that would find detailed information to answer the question. Return ONLY the search query, nothing else."""
 
 
-def generate_search_query(question: str, digest: str, context: str) -> str:
+def generate_search_query(question: str, digest: str, context: str) -> dict:
     user_prompt = f"Digest:\n{digest}\n\n"
     if context:
         user_prompt += f"Conversation so far:\n{context}\n\n"
@@ -63,7 +73,7 @@ Rules:
 - If unknown, say "I don't have that information" and nothing else."""
 
 
-def synthesize_answer(question: str, search_results: list[dict], digest: str, context: str) -> str:
+def synthesize_answer(question: str, search_results: list[dict], digest: str, context: str) -> dict:
     results_text = ""
     for r in search_results:
         results_text += f"Title: {r['title']}\n{r['content']}\n\n"
@@ -83,7 +93,8 @@ def _resummarize(older_summary: str, turn: dict) -> str:
     if older_summary:
         text += f"Previous summary:\n{older_summary}\n\n"
     text += f"New exchange:\nUser asked: {turn['q']}\nAnswer: {turn['a']}"
-    return _call_llm(SUMMARIZE_SYSTEM, text)
+    result = _call_llm(SUMMARIZE_SYSTEM, text)
+    return result["text"]
 
 
 def handle_question(session_id: str, question: str) -> dict:
@@ -93,14 +104,48 @@ def handle_question(session_id: str, question: str) -> dict:
 
     digest = session["digest"]
     context = _build_context(session)
+    turn_index = len(session["recent_turns"]) + 1
 
-    search_query = generate_search_query(question, digest, context)
-    logger.info("Search query: %s", search_query)
+    # Layer 1 — Search query generation
+    query_result = generate_search_query(question, digest, context)
+    search_query = query_result["text"]
 
+    # Layer 2 — Retrieval
+    t0 = time.time()
     search_results = web_search(search_query)
+    search_latency = round(time.time() - t0, 3)
 
-    answer = synthesize_answer(question, search_results, digest, context)
-    logger.info("Answer: %s", answer[:100])
+    # Layer 3 — Synthesis
+    answer_result = synthesize_answer(question, search_results, digest, context)
+    answer = answer_result["text"]
+    answer_word_count = len(answer.split())
+
+    # Structured log
+    log_entry = {
+        "event": "ask_turn",
+        "session_id": session_id,
+        "turn": turn_index,
+        "question": question,
+        "layer_1_query": {
+            "generated_query": search_query,
+            "latency_s": query_result["latency"],
+            "tokens_in": query_result["tokens_in"],
+            "tokens_out": query_result["tokens_out"],
+        },
+        "layer_2_retrieval": {
+            "result_count": len(search_results),
+            "titles": [r.get("title", "") for r in search_results],
+            "latency_s": search_latency,
+        },
+        "layer_3_synthesis": {
+            "answer": answer,
+            "word_count": answer_word_count,
+            "latency_s": answer_result["latency"],
+            "tokens_in": answer_result["tokens_in"],
+            "tokens_out": answer_result["tokens_out"],
+        },
+    }
+    print(f"[ASK] {json.dumps(log_entry)}")
 
     session["recent_turns"].append({"q": question, "a": answer})
 

@@ -1,6 +1,8 @@
+import json
 import logging
 import re
 import threading
+import time
 from datetime import datetime, timezone
 
 import os
@@ -180,6 +182,8 @@ def session_create():
 
 @app.route("/ask", methods=["POST"])
 def ask():
+    t_start = time.time()
+
     session_id = request.form.get("session_id", "")
     if not session_id:
         return jsonify({"error": "session_id required"}), 400
@@ -195,13 +199,21 @@ def ask():
     filename = audio_file.filename or "audio.webm"
 
     from .transcribe import transcribe
+    t_stt = time.time()
     question = transcribe(audio_bytes, filename)
+    stt_latency = round(time.time() - t_stt, 3)
     if not question:
         return jsonify({"error": "Could not transcribe audio"}), 400
 
     result = handle_question(session_id, question)
 
+    t_tts = time.time()
     response_audio = generate_response_audio(result["answer"])
+    tts_latency = round(time.time() - t_tts, 3)
+
+    total_latency = round(time.time() - t_start, 3)
+
+    print(f"[ASK_E2E] {json.dumps({'session_id': session_id, 'stt_latency_s': stt_latency, 'tts_latency_s': tts_latency, 'total_latency_s': total_latency})}")
 
     return jsonify({
         "audio": response_audio,
