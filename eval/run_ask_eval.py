@@ -16,8 +16,8 @@ import time
 from dotenv import load_dotenv
 load_dotenv()
 
-from digest.interactive import generate_search_query, synthesize_answer, try_digest_answer, SEARCH_NEEDED_TOKEN
-from digest.search import web_search
+from digest.ask.interactive import generate_search_query, synthesize_answer, try_digest_answer, SEARCH_NEEDED_TOKEN
+from digest.ask.search import web_search
 from eval.rubrics.ask import run_all_checks
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures", "ask")
