@@ -386,7 +386,7 @@
         </svg>
       </span>
       <span class="label" id="askLabel">Ask Balto</span>
-      <span class="kbd" id="askKbd">tap</span>
+      <span class="kbd" id="askKbd">hold</span>
     </button>
   </div>
 
@@ -413,7 +413,7 @@
           </svg>
         </div>
         <h3>No questions yet</h3>
-        <p>Tap <em>Ask Balto</em> to dive deeper into anything from today's brief. Your exchanges will appear here.</p>
+        <p>Hold <em>Ask Balto</em> to dive deeper into anything from today's brief. Your exchanges will appear here.</p>
       </div>
     </div>
   </aside>
@@ -490,7 +490,6 @@
   }
 
   playBtn.addEventListener("click", function() {
-    if (orbState !== "idle") return;
     if (audio.paused) {
       audio.play(); playIcon.style.display = "none"; pauseIcon.style.display = "block";
     } else {
@@ -534,8 +533,8 @@
       askBtn.classList.add("active");
       askKbd.style.display = "none";
       if (state === "listening") {
-        stateText.textContent = isAutoListening ? "Follow up" : "Listening";
-        askLabel.textContent = isAutoListening ? "Follow up…" : "Listening…";
+        stateText.textContent = "Listening";
+        askLabel.textContent = "Listening — release to send";
         micIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor"/></svg>';
       } else if (state === "thinking") {
         stateText.textContent = "Thinking";
@@ -632,59 +631,7 @@
   }
 
   // --- Ask flow ---
-  const SPEECH_THRESHOLD = 0.015;
-  const SILENCE_DURATION = 2000;
-  const AUTO_LISTEN_DELAY = 500;
-  const AUTO_LISTEN_TIMEOUT = 5000;
-  let audioCtx = null;
-  let analyser = null;
-  let micSource = null;
-  let micStream = null;
-  let speechDetected = false;
-  let silenceTimer = null;
-  let monitorFrame = null;
-  let autoListenTimer = null;
-  let isAutoListening = false;
-  let startingMic = false;
-
-  function cleanupMic() {
-    if (monitorFrame) { cancelAnimationFrame(monitorFrame); monitorFrame = null; }
-    if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
-    if (autoListenTimer) { clearTimeout(autoListenTimer); autoListenTimer = null; }
-    if (micSource) { micSource.disconnect(); micSource = null; }
-    if (micStream) { micStream.getTracks().forEach(function(t) { t.stop(); }); micStream = null; }
-    isAutoListening = false;
-  }
-
-  function getRMS() {
-    var data = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteTimeDomainData(data);
-    var sum = 0;
-    for (var i = 0; i < data.length; i++) {
-      var v = (data[i] - 128) / 128;
-      sum += v * v;
-    }
-    return Math.sqrt(sum / data.length);
-  }
-
-  function monitorAudio() {
-    if (orbState !== "listening") return;
-    var rms = getRMS();
-
-    if (rms > SPEECH_THRESHOLD) {
-      speechDetected = true;
-      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
-    } else if (speechDetected && !silenceTimer) {
-      silenceTimer = setTimeout(function() { stopListening(); }, SILENCE_DURATION);
-    }
-
-    monitorFrame = requestAnimationFrame(monitorAudio);
-  }
-
-  let bargedIn = false;
-
   function stopSpeaking() {
-    bargedIn = true;
     if (responseAudio) {
       responseAudio.pause();
       responseAudio = null;
@@ -693,11 +640,9 @@
     stopVoiceprint();
   }
 
-  async function startListening(autoListen) {
+  async function startListening() {
     if (orbState === "speaking") { stopSpeaking(); return; }
-    if (orbState !== "idle" || !sessionId || startingMic) return;
-    isAutoListening = !!autoListen;
-    startingMic = true;
+    if (orbState !== "idle" || !sessionId) return;
 
     if (!audio.paused) {
       audio.pause();
@@ -705,60 +650,26 @@
     }
 
     try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === "suspended") await audioCtx.resume();
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;
-      micSource = audioCtx.createMediaStreamSource(micStream);
-      micSource.connect(analyser);
-
-      mediaRecorder = new MediaRecorder(micStream);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
       audioChunks = [];
-      speechDetected = false;
-      silenceTimer = null;
 
       mediaRecorder.addEventListener("dataavailable", function(e) {
         if (e.data.size > 0) audioChunks.push(e.data);
       });
 
       mediaRecorder.addEventListener("stop", function() {
-        var wasAutoListening = isAutoListening;
-        var hadSpeech = speechDetected;
-        cleanupMic();
-        if (!hadSpeech) {
-          setOrbState("idle");
-          stopVoiceprint();
-          liveQuery.classList.remove("show");
-          if (wasAutoListening && audio.paused && audio.currentTime > 0 && audio.currentTime < audio.duration) {
-            audio.play();
-            playIcon.style.display = "none"; pauseIcon.style.display = "block";
-          }
-          return;
-        }
-        var blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
         processQuestion(blob);
       });
 
       mediaRecorder.start();
-      startingMic = false;
       setOrbState("listening");
       startVoiceprint();
-      liveQuery.textContent = isAutoListening ? "Follow up or stay silent…" : "Listening…";
+      liveQuery.textContent = "Listening…";
       liveQuery.classList.add("show");
-
-      monitorFrame = requestAnimationFrame(monitorAudio);
-
-      if (autoListen) {
-        autoListenTimer = setTimeout(function() {
-          if (orbState === "listening" && !speechDetected) {
-            stopListening();
-          }
-        }, AUTO_LISTEN_TIMEOUT);
-      }
     } catch (e) {
-      startingMic = false;
       console.error("Mic access denied:", e);
     }
   }
@@ -773,24 +684,21 @@
 
   async function processQuestion(audioBlob) {
     try {
-      var formData = new FormData();
+      const formData = new FormData();
       formData.append("session_id", sessionId);
       formData.append("audio", audioBlob, "audio.webm");
 
-      var resp = await fetch("/ask", { method: "POST", body: formData });
+      const resp = await fetch("/ask", { method: "POST", body: formData });
 
       if (!resp.ok) {
-        var err = await resp.json().catch(function() { return {}; });
+        const err = await resp.json();
         console.error("Ask failed:", err);
-        liveQuery.textContent = "Something went wrong. Try again.";
-        liveQuery.classList.add("show");
-        setTimeout(function() { liveQuery.classList.remove("show"); }, 2500);
         setOrbState("idle");
         stopVoiceprint();
         return;
       }
 
-      var data = await resp.json();
+      const data = await resp.json();
 
       addEntry(data.question, data.answer);
       liveQuery.classList.remove("show");
@@ -798,43 +706,30 @@
       setOrbState("speaking");
       startVoiceprint();
 
-      var audioBytes = Uint8Array.from(atob(data.audio), function(c) { return c.charCodeAt(0); });
-      var blob = new Blob([audioBytes], { type: "audio/mpeg" });
-      var url = URL.createObjectURL(blob);
+      const audioBytes = Uint8Array.from(atob(data.audio), function(c) { return c.charCodeAt(0); });
+      const blob = new Blob([audioBytes], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
 
-      bargedIn = false;
       responseAudio = new Audio(url);
       responseAudio.addEventListener("ended", function() {
         URL.revokeObjectURL(url);
         responseAudio = null;
+        setOrbState("idle");
         stopVoiceprint();
-        if (bargedIn) {
-          bargedIn = false;
-          setOrbState("idle");
-        } else {
-          setOrbState("idle");
-          setTimeout(function() { startListening(true); }, AUTO_LISTEN_DELAY);
-        }
       });
       responseAudio.play();
 
     } catch (e) {
       console.error("Process question failed:", e);
-      liveQuery.textContent = "Something went wrong. Try again.";
-      liveQuery.classList.add("show");
-      setTimeout(function() { liveQuery.classList.remove("show"); }, 2500);
       setOrbState("idle");
       stopVoiceprint();
     }
   }
 
-  // Ask button — tap to talk
-  askBtn.addEventListener("click", function(e) {
-    e.preventDefault();
-    if (orbState === "idle") startListening();
-    else if (orbState === "listening") stopListening();
-    else if (orbState === "speaking") stopSpeaking();
-  });
+  // Ask button — hold to talk
+  askBtn.addEventListener("pointerdown", function(e) { e.preventDefault(); startListening(); });
+  askBtn.addEventListener("pointerup", function(e) { e.preventDefault(); if (orbState === "listening") stopListening(); });
+  askBtn.addEventListener("pointerleave", function(e) { if (orbState === "listening") stopListening(); });
   askBtn.addEventListener("contextmenu", function(e) { e.preventDefault(); });
 
   // --- Session cleanup ---
@@ -845,18 +740,7 @@
     sessionId = null;
   }
 
-  window.addEventListener("beforeunload", function() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-    }
-    cleanupMic();
-    if (responseAudio) {
-      responseAudio.pause();
-      responseAudio = null;
-    }
-    stopVoiceprint();
-    destroySession();
-  });
+  window.addEventListener("beforeunload", destroySession);
 })();
 </script>
 </body>
