@@ -117,6 +117,45 @@ def synthesize_answer(question: str, search_results: list[dict], digest: str, co
 SUMMARIZE_SYSTEM = """Summarize the following conversation history into a brief paragraph. Capture the key questions asked and facts learned. Be concise — this summary will be used as context for future questions."""
 
 
+def _print_log(entry: dict, used_search: bool):
+    sep = "─" * 60
+    src = "SEARCH" if used_search else "DIGEST"
+    dc = entry["digest_check"]
+
+    print(f"\n{sep}")
+    print(f"  [ASK] Turn {entry['turn']}  [{src}]  session={entry['session_id'][:12]}…")
+    print(f"{sep}")
+    print(f"  Question:       {entry['question']}")
+    print(f"  Digest check:   {dc['response'][:80]}{'…' if len(dc['response']) > 80 else ''}")
+    print(f"                  {dc['latency_s']}s  tokens: {dc['tokens_in']}→{dc['tokens_out']}")
+
+    if used_search:
+        l1 = entry["layer_1_query"]
+        l2 = entry["layer_2_retrieval"]
+        l3 = entry["layer_3_synthesis"]
+        print(f"  Search query:   {l1['generated_query']}")
+        print(f"                  {l1['latency_s']}s  tokens: {l1['tokens_in']}→{l1['tokens_out']}")
+        print(f"  Results:        {l2['result_count']} hits  {l2['latency_s']}s")
+        for t in l2["titles"][:3]:
+            print(f"                  • {t[:70]}")
+        if l2["result_count"] > 3:
+            print(f"                  … +{l2['result_count'] - 3} more")
+        print(f"  Answer:         {l3['answer']}")
+        print(f"                  {l3['word_count']} words  {l3['latency_s']}s  tokens: {l3['tokens_in']}→{l3['tokens_out']}")
+    else:
+        da = entry["digest_answer"]
+        print(f"  Answer:         {da['answer']}")
+        print(f"                  {da['word_count']} words")
+
+    total = dc["latency_s"]
+    if used_search:
+        total = l1["latency_s"] + l2["latency_s"] + l3["latency_s"] + dc["latency_s"]
+    print(f"  Total latency:  {round(total, 3)}s")
+    print(sep)
+
+    logger.debug("ask_turn_raw: %s", json.dumps(entry))
+
+
 def _resummarize(older_summary: str, turn: dict) -> str:
     text = ""
     if older_summary:
@@ -207,7 +246,7 @@ def handle_question(session_id: str, question: str) -> dict:
             "word_count": answer_word_count,
         }
 
-    print(f"[ASK] {json.dumps(log_entry)}")
+    _print_log(log_entry, used_search)
 
     session["recent_turns"].append({"q": question, "a": answer})
 
