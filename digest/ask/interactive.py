@@ -72,7 +72,13 @@ def try_digest_answer(question: str, digest: str, context: str) -> dict:
     return _call_llm(DIGEST_CHECK_SYSTEM, user_prompt, max_tokens=100)
 
 
-SEARCH_QUERY_SYSTEM = """You generate web search queries. Given a user's question and context from a news digest, produce a single concise search query that would find detailed information to answer the question. Return ONLY the search query, nothing else."""
+SEARCH_QUERY_SYSTEM = """You generate web search queries for a news digest assistant.
+
+Steps:
+1. First, resolve what the user is referring to. Check the conversation history first, then the digest. Identify the specific topic, entity, or event — do not guess between multiple possibilities.
+2. Then, build a concise search query about that specific topic to find the detailed information the user is asking for. Include key identifying details (names, locations, institutions) from the digest or conversation to make the query precise.
+
+Return ONLY the final search query, nothing else."""
 
 
 def generate_search_query(question: str, digest: str, context: str) -> dict:
