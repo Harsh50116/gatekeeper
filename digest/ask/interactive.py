@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 MODEL = "llama-3.3-70b-versatile"
+TOOL_USE_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 MAX_RECENT_TURNS = 3
 
 
@@ -52,41 +53,82 @@ def _build_context(session: dict) -> str:
     return "\n\n".join(parts)
 
 
-DIGEST_CHECK_SYSTEM = """You are a news digest assistant. The user asked a follow-up question while listening to their morning digest. Decide if the digest and conversation history contain enough information to answer the question fully and accurately.
+SEARCH_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "web_search",
+        "description": "Search the web for current or detailed information not available in the digest or conversation history. Use when the user asks about something not covered, wants more detail than available, or asks for current/live/latest data.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "A specific search query. Resolve pronouns and references from conversation history before generating the query.",
+                }
+            },
+            "required": ["query"],
+        },
+    },
+}
 
-Rules:
-- If the digest or conversation history contains the specific facts needed, answer directly in 1-2 sentences (under 40 words). Follow the same spoken format rules: no markdown, no preamble, spell out numbers.
-- If the question asks for "current", "latest", "live", or "right now" data — reply SEARCH_NEEDED.
-- If the question asks for information NOT in the digest or conversation — reply SEARCH_NEEDED.
-- If the question contains a false assumption that contradicts the digest, correct it directly.
-- Reply with ONLY the answer or the word SEARCH_NEEDED. Nothing else."""
+ROUTE_SYSTEM = """You are a news digest assistant. The user is asking a follow-up question while listening to their morning digest.
 
-SEARCH_NEEDED_TOKEN = "SEARCH_NEEDED"
+You have the digest text and recent conversation history. Answer directly if you have enough information. Use the web_search tool if you need more.
+
+When answering directly:
+- Be concise and to the point unless the user asks for detail.
+- Spoken format: no markdown, no preamble, spell out numbers.
+- If the question contains a false assumption, correct it.
+
+When to use web_search:
+- The user asks for details beyond what's in the digest or conversation.
+- The user asks for current, latest, or live data.
+- The user wants to know more about a topic only briefly mentioned.
+- You can only partially answer and need more information."""
 
 
-def try_digest_answer(question: str, digest: str, context: str) -> dict:
+def route_question(question: str, digest: str, context: str) -> dict:
+    client = _get_client()
+
     user_prompt = f"Digest:\n{digest}\n\n"
     if context:
         user_prompt += f"Conversation so far:\n{context}\n\n"
     user_prompt += f"User's question: {question}"
-    return _call_llm(DIGEST_CHECK_SYSTEM, user_prompt, max_tokens=100)
 
+    t0 = time.time()
+    resp = client.chat.completions.create(
+        model=TOOL_USE_MODEL,
+        messages=[
+            {"role": "system", "content": ROUTE_SYSTEM},
+            {"role": "user", "content": user_prompt},
+        ],
+        tools=[SEARCH_TOOL],
+        tool_choice="auto",
+        temperature=0.2,
+        max_completion_tokens=4096,
+    )
+    latency = round(time.time() - t0, 3)
+    usage = resp.usage
 
-SEARCH_QUERY_SYSTEM = """You generate web search queries for a news digest assistant.
+    message = resp.choices[0].message
+    result = {
+        "latency": latency,
+        "tokens_in": usage.prompt_tokens if usage else 0,
+        "tokens_out": usage.completion_tokens if usage else 0,
+    }
 
-Steps:
-1. First, resolve what the user is referring to. Check the conversation history first, then the digest. Identify the specific topic, entity, or event — do not guess between multiple possibilities.
-2. Then, build a concise search query about that specific topic to find the detailed information the user is asking for. Include key identifying details (names, locations, institutions) from the digest or conversation to make the query precise.
+    if message.tool_calls:
+        tool_call = message.tool_calls[0]
+        args = json.loads(tool_call.function.arguments)
+        result["action"] = "search"
+        result["search_query"] = args["query"]
+        result["text"] = None
+    else:
+        result["action"] = "answer"
+        result["text"] = message.content.strip() if message.content else ""
+        result["search_query"] = None
 
-Return ONLY the final search query, nothing else."""
-
-
-def generate_search_query(question: str, digest: str, context: str) -> dict:
-    user_prompt = f"Digest:\n{digest}\n\n"
-    if context:
-        user_prompt += f"Conversation so far:\n{context}\n\n"
-    user_prompt += f"User's question: {question}"
-    return _call_llm(SEARCH_QUERY_SYSTEM, user_prompt)
+    return result
 
 
 ANSWER_SYSTEM = """You answer follow-up questions about a news digest. You MUST reply in 1-2 sentences only. Never exceed 40 words.
@@ -120,36 +162,33 @@ SUMMARIZE_SYSTEM = """Summarize the following conversation history into a brief 
 def _print_log(entry: dict, used_search: bool):
     sep = "─" * 60
     src = "SEARCH" if used_search else "DIGEST"
-    dc = entry["digest_check"]
+    route = entry["route"]
 
     print(f"\n{sep}")
     print(f"  [ASK] Turn {entry['turn']}  [{src}]  session={entry['session_id'][:12]}…")
     print(f"{sep}")
     print(f"  Question:       {entry['question']}")
-    print(f"  Digest check:   {dc['response'][:80]}{'…' if len(dc['response']) > 80 else ''}")
-    print(f"                  {dc['latency_s']}s  tokens: {dc['tokens_in']}→{dc['tokens_out']}")
+    print(f"  Route:          {route['action']}")
+    print(f"                  {route['latency_s']}s  tokens: {route['tokens_in']}→{route['tokens_out']}")
 
     if used_search:
-        l1 = entry["layer_1_query"]
-        l2 = entry["layer_2_retrieval"]
-        l3 = entry["layer_3_synthesis"]
-        print(f"  Search query:   {l1['generated_query']}")
-        print(f"                  {l1['latency_s']}s  tokens: {l1['tokens_in']}→{l1['tokens_out']}")
-        print(f"  Results:        {l2['result_count']} hits  {l2['latency_s']}s")
-        for t in l2["titles"][:3]:
+        ret = entry["retrieval"]
+        syn = entry["synthesis"]
+        print(f"  Search query:   {route['search_query']}")
+        print(f"  Results:        {ret['result_count']} hits  {ret['latency_s']}s")
+        for t in ret["titles"][:3]:
             print(f"                  • {t[:70]}")
-        if l2["result_count"] > 3:
-            print(f"                  … +{l2['result_count'] - 3} more")
-        print(f"  Answer:         {l3['answer']}")
-        print(f"                  {l3['word_count']} words  {l3['latency_s']}s  tokens: {l3['tokens_in']}→{l3['tokens_out']}")
+        if ret["result_count"] > 3:
+            print(f"                  … +{ret['result_count'] - 3} more")
+        print(f"  Answer:         {syn['answer']}")
+        print(f"                  {syn['word_count']} words  {syn['latency_s']}s  tokens: {syn['tokens_in']}→{syn['tokens_out']}")
     else:
-        da = entry["digest_answer"]
-        print(f"  Answer:         {da['answer']}")
-        print(f"                  {da['word_count']} words")
+        print(f"  Answer:         {route['answer']}")
+        print(f"                  {route['word_count']} words")
 
-    total = dc["latency_s"]
+    total = route["latency_s"]
     if used_search:
-        total = l1["latency_s"] + l2["latency_s"] + l3["latency_s"] + dc["latency_s"]
+        total += ret["latency_s"] + syn["latency_s"]
     print(f"  Total latency:  {round(total, 3)}s")
     print(sep)
 
@@ -174,66 +213,49 @@ def handle_question(session_id: str, question: str) -> dict:
     context = _build_context(session)
     turn_index = len(session["recent_turns"]) + 1
 
-    # Step 0 — Try answering from digest + conversation history first
-    digest_check = try_digest_answer(question, digest, context)
-    digest_answer = digest_check["text"]
-    used_search = False
+    # Step 1 — Route: answer directly or call web_search
+    route = route_question(question, digest, context)
+    used_search = route["action"] == "search"
 
-    if SEARCH_NEEDED_TOKEN in digest_answer:
-        # Digest can't answer — go to search
-        used_search = True
-
-        # Layer 1 — Search query generation
-        query_result = generate_search_query(question, digest, context)
-        search_query = query_result["text"]
-
-        # Layer 2 — Retrieval
+    if used_search:
+        # Step 2 — Retrieval
         t0 = time.time()
-        search_results = web_search(search_query)
+        search_results = web_search(route["search_query"])
         search_latency = round(time.time() - t0, 3)
 
-        # Layer 3 — Synthesis
+        # Step 3 — Synthesis
         answer_result = synthesize_answer(question, search_results, digest, context)
         answer = answer_result["text"]
     else:
-        # Digest answered it directly
-        answer = digest_answer
-        search_query = None
+        answer = route["text"]
         search_results = []
         search_latency = 0
-        query_result = None
-        answer_result = digest_check
+        answer_result = None
 
     answer_word_count = len(answer.split())
 
-    # Structured log
     log_entry = {
         "event": "ask_turn",
         "session_id": session_id,
         "turn": turn_index,
         "question": question,
         "used_search": used_search,
-        "digest_check": {
-            "response": digest_check["text"],
-            "latency_s": digest_check["latency"],
-            "tokens_in": digest_check["tokens_in"],
-            "tokens_out": digest_check["tokens_out"],
+        "route": {
+            "action": route["action"],
+            "latency_s": route["latency"],
+            "tokens_in": route["tokens_in"],
+            "tokens_out": route["tokens_out"],
         },
     }
 
     if used_search:
-        log_entry["layer_1_query"] = {
-            "generated_query": search_query,
-            "latency_s": query_result["latency"],
-            "tokens_in": query_result["tokens_in"],
-            "tokens_out": query_result["tokens_out"],
-        }
-        log_entry["layer_2_retrieval"] = {
+        log_entry["route"]["search_query"] = route["search_query"]
+        log_entry["retrieval"] = {
             "result_count": len(search_results),
             "titles": [r.get("title", "") for r in search_results],
             "latency_s": search_latency,
         }
-        log_entry["layer_3_synthesis"] = {
+        log_entry["synthesis"] = {
             "answer": answer,
             "word_count": answer_word_count,
             "latency_s": answer_result["latency"],
@@ -241,10 +263,8 @@ def handle_question(session_id: str, question: str) -> dict:
             "tokens_out": answer_result["tokens_out"],
         }
     else:
-        log_entry["digest_answer"] = {
-            "answer": answer,
-            "word_count": answer_word_count,
-        }
+        log_entry["route"]["answer"] = answer
+        log_entry["route"]["word_count"] = answer_word_count
 
     _print_log(log_entry, used_search)
 
