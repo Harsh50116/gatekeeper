@@ -1,0 +1,7 @@
+Good morning. In science, two groundbreaking studies are making waves today. Researchers at Lund University in Sweden have developed a rechargeable solar battery that can store energy for up to eighteen years using a specially designed molecule. The team, led by doctoral student Erik Johansson and Professor Kasper Moth-Poulsen, published their findings in the journal Energy and Environmental Science.
+
+Meanwhile, a team at UC Santa Barbara has created a liquid solar battery that stores sunlight as heat. The project, led by Associate Professor Grace Han and graduate student Han Nguyen, was featured in Science Daily and has drawn comparisons to the Swedish work, though the two approaches are fundamentally different.
+
+In tech, OpenAI released GPT-5 with native multimodal capabilities, accepting text, images, audio, and video in a single prompt. The model scored ninety-two percent on the MMLU benchmark, up from eighty-six percent with GPT-4o. Pricing starts at fifteen dollars per million input tokens.
+
+In sports, the Champions League semifinal first legs wrapped up with Barcelona beating Bayern Munich three to one at Camp Nou, with Lamine Yamal scoring twice. In the other semifinal, Arsenal drew nil-nil with Inter Milan at the San Siro in a defensive stalemate.

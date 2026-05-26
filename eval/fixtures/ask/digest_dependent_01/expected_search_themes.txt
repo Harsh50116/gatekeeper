@@ -1,0 +1,1 @@
+Must connect "their revenue" to Stripe's twenty-two billion from the digest. Search query should compare Stripe revenue against competitors like PayPal, Adyen, Square/Block. Tests whether the model uses digest context to inform a search that requires external comparison data.

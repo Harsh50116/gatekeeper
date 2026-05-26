@@ -1,0 +1,1 @@
+This is a prediction request — no search result can answer it. The model should decline clearly ("I don't have that information") rather than speculating or providing analyst guesses as fact. Tests graceful handling of genuinely unanswerable questions.

@@ -1,0 +1,5 @@
+Good morning. Starting with world news. Ukrainian President Zelensky met with French President Macron in Paris yesterday to discuss a new defense package worth three billion euros. Macron pledged long-range missile systems and additional air defense units. The meeting came just days after Zelensky's visit to Berlin, where German Chancellor Scholz offered a separate two billion euro commitment focused on reconstruction aid.
+
+In tech, Nvidia CEO Jensen Huang revealed the company's next-generation Blackwell Ultra chip during a keynote in Taipei. The chip delivers four times the inference performance of the current Hopper architecture and will ship to cloud providers in early twenty twenty-seven. AMD responded within hours, announcing their MI400 accelerator with competitive benchmarks.
+
+In science, researchers at MIT announced a breakthrough in solid-state battery technology, achieving an energy density of five hundred watt-hours per kilogram. The team says commercial applications could arrive within three years, potentially doubling the range of electric vehicles.

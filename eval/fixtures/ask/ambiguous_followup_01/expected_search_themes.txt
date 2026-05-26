@@ -1,0 +1,1 @@
+Should resolve "that" to the EU AI regulation from the prior turn. Search query should be about EU AI regulation details/requirements, not about Apple or Tesla. Tests context resolution with ambiguous reference.

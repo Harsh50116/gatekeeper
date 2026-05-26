@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief — Today's Briefing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0807;
+    --bg-2: #110d0b;
+    --ink: #ece4d8;
+    --ink-dim: #a89f93;
+    --ink-faint: #5d5349;
+    --accent: #d4895c;
+    --accent-rgb: 212, 137, 92;
+    --line: rgba(236, 228, 216, 0.08);
+    --line-2: rgba(236, 228, 216, 0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", system-ui, sans-serif;
+    height: 100%; overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
+  button:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(236,228,216,0.08); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(236,228,216,0.18); }
+
+  .app {
+    position: relative; width: 100%; height: 100vh; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 60%, rgba(var(--accent-rgb), 0.06) 0%, transparent 55%), var(--bg);
+  }
+
+  /* ---- Top bar ---- */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 22px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    z-index: 5;
+  }
+  .brand { font-family: "Instrument Serif", Georgia, serif; font-size: 26px; letter-spacing: -0.01em; }
+  .top-actions { display: flex; align-items: center; gap: 14px; }
+  .transcript-btn {
+    position: relative; width: 36px; height: 36px; border-radius: 999px;
+    display: grid; place-items: center; color: var(--ink-dim);
+    transition: background .2s, color .2s;
+  }
+  .transcript-btn:hover { color: var(--ink); background: rgba(255,255,255,0.04); }
+  .transcript-btn.active { color: var(--accent); }
+  .count-dot {
+    position: absolute; top: 4px; right: 4px;
+    min-width: 14px; height: 14px; padding: 0 4px;
+    background: var(--accent); color: #1a0f08;
+    border-radius: 999px; font-size: 9px; font-weight: 600;
+    display: grid; place-items: center;
+    box-shadow: 0 0 0 2px var(--bg);
+    line-height: 1;
+  }
+  .count-dot.hidden { display: none; }
+
+  /* ---- Center stack ---- */
+  .stack {
+    position: absolute; top: 76px; left: 0; right: 0; bottom: 96px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(10px, 2.4vh, 28px);
+    transition: transform .55s cubic-bezier(.22,.61,.36,1);
+    padding: 8px 24px; overflow: hidden;
+  }
+  .stack.shifted { transform: none; }
+
+  .head { text-align: center; display: flex; flex-direction: column; align-items: center; gap: clamp(6px, 1.2vh, 12px); flex-shrink: 0; }
+  .date { font-size: 11px; letter-spacing: 0.22em; color: var(--ink-dim); text-transform: uppercase; }
+  .title { font-family: "Instrument Serif", Georgia, serif; font-size: clamp(30px, 4.4vw, 64px); line-height: 1; letter-spacing: -0.01em; }
+  .title em { font-style: italic; color: var(--accent); }
+  .topics { display: flex; gap: 18px; font-size: 12px; letter-spacing: 0.18em; color: var(--ink-dim); text-transform: uppercase; }
+  .topics .sep { color: var(--ink-faint); }
+
+  /* State hint */
+  .state-hint {
+    height: 24px; flex-shrink: 0;
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink-dim);
+    display: flex; align-items: center; gap: 10px;
+    opacity: 0; transition: opacity .25s ease;
+  }
+  .state-hint.show { opacity: 1; }
+  .state-hint .dot {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--accent); box-shadow: 0 0 10px var(--accent);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.35; } }
+
+  /* Live query text */
+  .live-q {
+    max-width: 640px; min-height: 28px; flex-shrink: 0;
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 22px; line-height: 1.3; text-align: center;
+    color: var(--ink); letter-spacing: -0.005em;
+    opacity: 0; transition: opacity .3s ease;
+  }
+  .live-q.show { opacity: 1; }
+  .live-q.show::after {
+    content: "▍"; display: inline-block; margin-left: 2px;
+    color: var(--accent); animation: caret 1s steps(2) infinite;
+  }
+  @keyframes caret { 50% { opacity: 0; } }
+
+  /* ---- Orb ---- */
+  .orb-wrap {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; aspect-ratio: 1;
+    width: min(340px, 38vh, 52vw); height: min(340px, 38vh, 52vw);
+  }
+  .orb-rings, .orb-rings::before, .orb-rings::after {
+    position: absolute; inset: 0; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.04); pointer-events: none;
+  }
+  .orb-rings::before { content: ""; inset: 8%; border-color: rgba(255,255,255,0.05); }
+  .orb-rings::after { content: ""; inset: 18%; border-color: rgba(255,255,255,0.06); }
+  .orb-halo {
+    position: absolute; inset: 0; border-radius: 999px;
+    background: radial-gradient(circle, rgba(var(--accent-rgb), 0.16) 0%, rgba(var(--accent-rgb), 0.06) 26%, transparent 60%);
+    filter: blur(2px); pointer-events: none;
+  }
+  .orb-core {
+    position: relative; width: 30%; aspect-ratio: 1; border-radius: 999px;
+    background: radial-gradient(circle at 38% 32%, #f3b687 0%, var(--accent) 38%, #8a4a2c 78%, #2a1610 100%);
+    box-shadow:
+      inset -10px -16px 28px rgba(0,0,0,0.55),
+      inset 8px 10px 22px rgba(255,205,160,0.18),
+      0 0 80px 10px rgba(var(--accent-rgb), 0.22),
+      0 0 180px 40px rgba(var(--accent-rgb), 0.18);
+    transition: transform .8s cubic-bezier(.22,.61,.36,1), box-shadow .8s ease;
+  }
+
+  /* Orb states */
+  .orb-wrap.idle .orb-core { animation: breathe 6s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+
+  .orb-wrap.listening .orb-core { transform: scale(1.06); animation: pulse-listen 1.6s ease-in-out infinite; }
+  @keyframes pulse-listen {
+    0%, 100% { box-shadow: inset -10px -16px 28px rgba(0,0,0,0.55), inset 8px 10px 22px rgba(255,205,160,0.18), 0 0 100px 18px rgba(var(--accent-rgb), 0.32), 0 0 220px 50px rgba(var(--accent-rgb), 0.20); }
+    50% { box-shadow: inset -10px -16px 28px rgba(0,0,0,0.55), inset 8px 10px 22px rgba(255,205,160,0.22), 0 0 140px 30px rgba(var(--accent-rgb), 0.42), 0 0 260px 70px rgba(var(--accent-rgb), 0.26); }
+  }
+
+  .orb-wrap.thinking .orb-core { animation: think 2.6s ease-in-out infinite; }
+  @keyframes think {
+    0%   { transform: scale(0.97) rotate(0); filter: hue-rotate(0deg); }
+    50%  { transform: scale(1.03) rotate(180deg); filter: hue-rotate(-10deg); }
+    100% { transform: scale(0.97) rotate(360deg); filter: hue-rotate(0deg); }
+  }
+  .think-arc {
+    position: absolute; inset: 6%; border-radius: 999px;
+    border: 1px solid transparent;
+    border-top-color: rgba(var(--accent-rgb), 0.7);
+    border-right-color: rgba(var(--accent-rgb), 0.25);
+    animation: spin 1.8s linear infinite;
+    display: none;
+  }
+  .orb-wrap.thinking .think-arc { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .orb-wrap.speaking .orb-core { animation: speak 0.9s ease-in-out infinite; }
+  @keyframes speak { 0%, 100% { transform: scale(1.0); } 50% { transform: scale(1.05); } }
+
+  /* Voiceprint SVG */
+  .voiceprint {
+    position: absolute; inset: 0; pointer-events: none;
+    opacity: 0; transition: opacity .4s ease;
+  }
+  .orb-wrap.listening .voiceprint,
+  .orb-wrap.speaking .voiceprint { opacity: 1; }
+
+  /* ---- Bottom bar ---- */
+  .bottombar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 18px 32px 22px;
+    display: flex; align-items: center; gap: 22px;
+    z-index: 5;
+    transition: padding-right .4s ease;
+  }
+  .play-btn {
+    width: 38px; height: 38px; border-radius: 999px;
+    border: 1.5px solid var(--accent); color: var(--accent);
+    display: grid; place-items: center; flex: 0 0 auto;
+    transition: background .2s, transform .15s;
+  }
+  .play-btn:hover { background: rgba(var(--accent-rgb), 0.1); }
+  .play-btn:active { transform: scale(0.96); }
+
+  .scrub-wrap { flex: 1; display: flex; align-items: center; gap: 18px; }
+  .timecode { font-size: 11px; letter-spacing: 0.08em; color: var(--ink-dim); font-variant-numeric: tabular-nums; min-width: 36px; }
+  .scrub { flex: 1; position: relative; height: 18px; display: flex; align-items: center; cursor: pointer; }
+  .scrub .track { position: absolute; left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.08); border-radius: 2px; }
+  .scrub .fill { position: absolute; left: 0; height: 1px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.4); }
+  .scrub .knob {
+    position: absolute; width: 10px; height: 10px; border-radius: 999px;
+    background: var(--accent); transform: translate(-50%, 0);
+    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.7);
+    opacity: 0; transition: opacity .2s;
+  }
+  .scrub:hover .knob { opacity: 1; }
+
+  /* Ask button */
+  .ask-btn {
+    position: relative; display: inline-flex; align-items: center; gap: 10px;
+    padding: 0 16px 0 14px; height: 38px; border-radius: 999px;
+    color: var(--ink); background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line-2);
+    transition: background .2s, border-color .2s, transform .15s, box-shadow .25s;
+    touch-action: none; user-select: none; flex: 0 0 auto;
+  }
+  .ask-btn:hover { background: rgba(var(--accent-rgb), 0.08); border-color: rgba(var(--accent-rgb), 0.35); }
+  .ask-btn.active { background: rgba(var(--accent-rgb), 0.18); border-color: var(--accent); box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.35); }
+  .ask-btn .mic { color: var(--accent); display: grid; place-items: center; }
+  .ask-btn .label { font-size: 13px; letter-spacing: 0.04em; color: var(--ink-dim); }
+  .ask-btn.active .label { color: var(--ink); }
+  .ask-btn .kbd {
+    font-size: 10px; letter-spacing: 0.06em; color: var(--ink-faint);
+    padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .ask-btn.active::after {
+    content: ""; position: absolute; inset: -6px; border-radius: 999px;
+    border: 1px solid rgba(var(--accent-rgb), 0.4);
+    animation: ring 1.4s ease-out infinite; pointer-events: none;
+  }
+  @keyframes ring { 0% { transform: scale(0.96); opacity: 0.8; } 100% { transform: scale(1.25); opacity: 0; } }
+
+  /* ---- Transcript panel ---- */
+  .tp {
+    position: fixed; z-index: 40;
+    top: 0; right: 0; bottom: 0; width: 440px; max-width: 90vw;
+    background: linear-gradient(180deg, rgba(14,11,9,0.96) 0%, rgba(10,8,7,0.96) 100%);
+    backdrop-filter: blur(18px) saturate(1.05);
+    border-left: 1px solid var(--line);
+    color: var(--ink);
+    transform: translateX(100%);
+    transition: transform .55s cubic-bezier(.22,.61,.36,1);
+    display: flex; flex-direction: column;
+  }
+  .tp.open { transform: translateX(0); }
+
+  .tp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 28px 14px; border-bottom: 1px solid var(--line);
+  }
+  .tp-head .label {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-dim);
+  }
+  .tp-head .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .tp-close {
+    width: 28px; height: 28px; border-radius: 999px;
+    display: grid; place-items: center; color: var(--ink-dim);
+    transition: color .2s, background .2s;
+  }
+  .tp-close:hover { color: var(--ink); background: rgba(255,255,255,0.04); }
+
+  .tp-scroll {
+    flex: 1; overflow-y: auto; padding: 22px 28px 32px;
+    display: flex; flex-direction: column; gap: 28px; scroll-behavior: smooth;
+  }
+  .tp-empty { margin: auto; text-align: center; max-width: 280px; color: var(--ink-dim); }
+  .tp-empty .glyph {
+    width: 38px; height: 38px; border-radius: 999px;
+    border: 1px solid var(--line-2); display: grid; place-items: center;
+    margin: 0 auto 16px; color: var(--ink-faint);
+  }
+  .tp-empty h3 {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 22px; font-weight: 400; color: var(--ink);
+    margin: 0 0 8px; letter-spacing: -0.01em;
+  }
+  .tp-empty p { font-size: 13px; line-height: 1.55; margin: 0; }
+
+  .entry { display: flex; flex-direction: column; gap: 10px; }
+  .entry .meta {
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink-faint); display: flex; align-items: center; gap: 8px;
+  }
+  .entry .q {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 22px; line-height: 1.28; color: var(--ink); letter-spacing: -0.005em;
+  }
+  .entry .a { font-size: 14px; line-height: 1.62; color: var(--ink-dim); }
+  .entry .divider { height: 1px; background: var(--line); margin-top: 18px; }
+
+  /* Loading spinner */
+  .loading-indicator {
+    display: none; align-items: center; gap: 8px;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-dim);
+  }
+  .loading-indicator.show { display: flex; }
+  .spinner {
+    width: 14px; height: 14px; border-radius: 999px;
+    border: 1.5px solid var(--ink-faint); border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* Responsive */
+  @media (max-height: 760px) { .topics { display: none; } }
+  @media (max-height: 680px) { .state-hint { height: 20px; } .live-q { font-size: 18px; min-height: 22px; } }
+  @media (max-height: 560px) { .live-q { display: none; } .date { display: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">Brief</div>
+    <div class="top-actions">
+      <button class="transcript-btn" id="transcriptToggle" aria-label="Transcript">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 2.5h6.5l3 3v8a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-11Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+          <path d="M10 2.5V5.5h3" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+          <path d="M5.5 8.5h5M5.5 10.5h5M5.5 12.5h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+        <span class="count-dot hidden" id="entryCount">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Center stack -->
+  <div class="stack" id="stack">
+    <div class="head">
+      <div class="date">{{ date_display }}</div>
+      <div class="title">Today's <em>briefing.</em></div>
+      <div class="topics">
+        {% for cat in categories %}
+          <span>{{ cat }}</span>{% if not loop.last %}<span class="sep">&middot;</span>{% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="state-hint" id="stateHint">
+      <span class="dot"></span>
+      <span id="stateText">Listening</span>
+    </div>
+
+    <!-- Orb -->
+    <div class="orb-wrap idle" id="orbWrap">
+      <div class="orb-rings"></div>
+      <div class="orb-halo"></div>
+      <div class="orb-core">
+        <div class="think-arc"></div>
+      </div>
+      <svg class="voiceprint" id="voiceprint" viewBox="-50 -50 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <div class="live-q" id="liveQuery">&nbsp;</div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="bottombar" id="bottombar">
+    <button class="play-btn" id="playBtn" aria-label="Play">
+      <svg id="playIcon" width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 1.5 L10 6 L2.5 10.5 Z" fill="currentColor"/></svg>
+      <svg id="pauseIcon" width="12" height="12" viewBox="0 0 12 12" style="display:none"><rect x="2" y="1" width="3" height="10" fill="currentColor"/><rect x="7" y="1" width="3" height="10" fill="currentColor"/></svg>
+    </button>
+
+    <div class="scrub-wrap">
+      <div class="timecode" id="currentTime">0:00</div>
+      <div class="scrub" id="scrubber">
+        <div class="track"></div>
+        <div class="fill" id="scrubFill" style="width:0%"></div>
+        <div class="knob" id="scrubKnob" style="left:0%"></div>
+      </div>
+      <div class="timecode" id="duration" style="text-align:right">0:00</div>
+    </div>
+
+    <button class="ask-btn" id="askBtn" aria-label="Hold to ask">
+      <span class="mic" id="micIcon">
+        <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
+          <rect x="5" y="1.5" width="4" height="8" rx="2" fill="currentColor"/>
+          <path d="M2 7.5a5 5 0 0010 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M7 12.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="label" id="askLabel">Ask Balto</span>
+      <span class="kbd" id="askKbd">hold</span>
+    </button>
+  </div>
+
+  <!-- Transcript panel -->
+  <aside class="tp" id="transcriptPanel">
+    <div class="tp-head">
+      <div class="label">
+        <span class="dot"></span>
+        <span>Transcript</span>
+        <span style="opacity:0.5">&middot;</span>
+        <span id="entryLabel" style="text-transform:none; letter-spacing:0.04em; font-size:11px">Nothing yet</span>
+      </div>
+      <button class="tp-close" id="transcriptClose" aria-label="Close transcript">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="tp-scroll" id="transcriptScroll">
+      <div class="tp-empty" id="emptyState">
+        <div class="glyph">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 2v3M8 11v3M2 8h3M11 8h3M3.8 3.8l2.1 2.1M10.1 10.1l2.1 2.1M3.8 12.2l2.1-2.1M10.1 5.9l2.1-2.1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>No questions yet</h3>
+        <p>Hold <em>Ask Balto</em> to dive deeper into anything from today's brief. Your exchanges will appear here.</p>
+      </div>
+    </div>
+  </aside>
+
+  <audio id="audio" src="{{ audio_url }}" preload="metadata"></audio>
+</div>
+
+<script>
+(function() {
+  // --- Config ---
+  const USER_ID = "{{ user_id }}";
+  const DIGEST_DATE = "{{ digest_date }}";
+  let sessionId = null;
+
+  // --- Elements ---
+  const audio = document.getElementById("audio");
+  const playBtn = document.getElementById("playBtn");
+  const playIcon = document.getElementById("playIcon");
+  const pauseIcon = document.getElementById("pauseIcon");
+  const scrubber = document.getElementById("scrubber");
+  const scrubFill = document.getElementById("scrubFill");
+  const scrubKnob = document.getElementById("scrubKnob");
+  const currentTimeEl = document.getElementById("currentTime");
+  const durationEl = document.getElementById("duration");
+  const orbWrap = document.getElementById("orbWrap");
+  const stateHint = document.getElementById("stateHint");
+  const stateText = document.getElementById("stateText");
+  const liveQuery = document.getElementById("liveQuery");
+  const askBtn = document.getElementById("askBtn");
+  const askLabel = document.getElementById("askLabel");
+  const askKbd = document.getElementById("askKbd");
+  const micIcon = document.getElementById("micIcon");
+  const stack = document.getElementById("stack");
+  const bottombar = document.getElementById("bottombar");
+  const transcriptToggle = document.getElementById("transcriptToggle");
+  const transcriptPanel = document.getElementById("transcriptPanel");
+  const transcriptClose = document.getElementById("transcriptClose");
+  const transcriptScroll = document.getElementById("transcriptScroll");
+  const entryCount = document.getElementById("entryCount");
+  const entryLabel = document.getElementById("entryLabel");
+  const emptyState = document.getElementById("emptyState");
+  const voiceprintSvg = document.getElementById("voiceprint");
+
+  let orbState = "idle";
+  let panelOpen = false;
+  let entries = [];
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let responseAudio = null;
+
+  // --- Session init ---
+  async function initSession() {
+    if (!USER_ID || !DIGEST_DATE) return;
+    try {
+      const resp = await fetch("/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: USER_ID, digest_date: DIGEST_DATE }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        sessionId = data.session_id;
+      }
+    } catch (e) {
+      console.error("Session init failed:", e);
+    }
+  }
+  initSession();
+
+  // --- Audio player ---
+  function fmt(s) {
+    const m = Math.floor(s / 60), r = Math.floor(s % 60);
+    return m + ":" + (r < 10 ? "0" : "") + r;
+  }
+
+  playBtn.addEventListener("click", function() {
+    if (audio.paused) {
+      audio.play(); playIcon.style.display = "none"; pauseIcon.style.display = "block";
+    } else {
+      audio.pause(); playIcon.style.display = "block"; pauseIcon.style.display = "none";
+    }
+  });
+
+  audio.addEventListener("loadedmetadata", function() { durationEl.textContent = fmt(audio.duration); });
+  audio.addEventListener("timeupdate", function() {
+    const pct = (audio.currentTime / audio.duration) * 100;
+    scrubFill.style.width = pct + "%";
+    scrubKnob.style.left = pct + "%";
+    currentTimeEl.textContent = fmt(audio.currentTime);
+  });
+  audio.addEventListener("ended", function() {
+    playIcon.style.display = "block"; pauseIcon.style.display = "none";
+    scrubFill.style.width = "0%"; scrubKnob.style.left = "0%";
+    currentTimeEl.textContent = "0:00";
+    destroySession();
+  });
+  scrubber.addEventListener("click", function(e) {
+    const rect = scrubber.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = pct * audio.duration;
+  });
+
+  // --- Orb state ---
+  function setOrbState(state) {
+    orbState = state;
+    orbWrap.className = "orb-wrap " + state;
+
+    if (state === "idle") {
+      stateHint.classList.remove("show");
+      liveQuery.classList.remove("show");
+      askLabel.textContent = "Ask Balto";
+      askKbd.style.display = "";
+      askBtn.classList.remove("active");
+      micIcon.innerHTML = '<svg width="14" height="16" viewBox="0 0 14 16" fill="none"><rect x="5" y="1.5" width="4" height="8" rx="2" fill="currentColor"/><path d="M2 7.5a5 5 0 0010 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 12.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+    } else {
+      stateHint.classList.add("show");
+      askBtn.classList.add("active");
+      askKbd.style.display = "none";
+      if (state === "listening") {
+        stateText.textContent = "Listening";
+        askLabel.textContent = "Listening — release to send";
+        micIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor"/></svg>';
+      } else if (state === "thinking") {
+        stateText.textContent = "Thinking";
+        askLabel.textContent = "Thinking…";
+      } else if (state === "speaking") {
+        stateText.textContent = "Balto is answering";
+        askLabel.textContent = "Stop";
+        micIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor"/></svg>';
+      }
+    }
+  }
+
+  // --- Voiceprint ---
+  const BAR_COUNT = 64;
+  let vpAnimFrame = null;
+  let vpTick = 0;
+
+  function drawVoiceprint() {
+    if (orbState !== "listening" && orbState !== "speaking") {
+      vpAnimFrame = null; return;
+    }
+    vpTick++;
+    let lines = "";
+    for (let i = 0; i < BAR_COUNT; i++) {
+      const a = (i / BAR_COUNT) * Math.PI * 2;
+      const seed = (Math.sin(i * 12.9898 + vpTick * 0.18) + 1) / 2;
+      const seed2 = (Math.sin(i * 78.233 + vpTick * 0.11) + 1) / 2;
+      const amp = orbState === "listening" ? 2 + seed * 7 + seed2 * 3 : 1.5 + seed * 4;
+      const r0 = 28;
+      const x0 = Math.cos(a) * r0, y0 = Math.sin(a) * r0;
+      const x1 = Math.cos(a) * (r0 + amp), y1 = Math.sin(a) * (r0 + amp);
+      const op = (0.45 + seed * 0.45).toFixed(2);
+      lines += '<line x1="'+x0+'" y1="'+y0+'" x2="'+x1+'" y2="'+y1+'" stroke="var(--accent)" stroke-opacity="'+op+'" stroke-width="0.45" stroke-linecap="round"/>';
+    }
+    voiceprintSvg.innerHTML = lines;
+    vpAnimFrame = requestAnimationFrame(drawVoiceprint);
+  }
+
+  function startVoiceprint() { if (!vpAnimFrame) { vpTick = 0; vpAnimFrame = requestAnimationFrame(drawVoiceprint); } }
+  function stopVoiceprint() { if (vpAnimFrame) { cancelAnimationFrame(vpAnimFrame); vpAnimFrame = null; } voiceprintSvg.innerHTML = ""; }
+
+  // --- Transcript panel ---
+  function togglePanel(open) {
+    panelOpen = typeof open === "boolean" ? open : !panelOpen;
+    transcriptPanel.classList.toggle("open", panelOpen);
+    transcriptToggle.classList.toggle("active", panelOpen);
+    // transcript overlays — no content shift
+  }
+
+  transcriptToggle.addEventListener("click", function() { togglePanel(); });
+  transcriptClose.addEventListener("click", function() { togglePanel(false); });
+
+  function clockNow() {
+    const d = new Date();
+    let h = d.getHours(); const m = d.getMinutes();
+    const ap = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return h + ":" + (m < 10 ? "0" : "") + m + " " + ap;
+  }
+
+  function addEntry(question, answer) {
+    entries.push({ q: question, a: answer, time: clockNow() });
+    renderEntries();
+  }
+
+  function renderEntries() {
+    const count = entries.length;
+    entryCount.textContent = count;
+    entryCount.classList.toggle("hidden", count === 0);
+    entryLabel.textContent = count === 0 ? "Nothing yet" : count + " exchange" + (count === 1 ? "" : "s");
+    emptyState.style.display = count === 0 ? "" : "none";
+
+    const existing = transcriptScroll.querySelectorAll(".entry");
+    existing.forEach(function(el) { el.remove(); });
+
+    entries.forEach(function(e, i) {
+      const div = document.createElement("div");
+      div.className = "entry";
+      div.innerHTML =
+        '<div class="meta"><span>You asked</span><span style="opacity:0.5">&middot;</span><span>' + e.time + '</span></div>' +
+        '<div class="q">' + escapeHtml(e.q) + '</div>' +
+        '<div class="a">' + escapeHtml(e.a) + '</div>' +
+        (i < entries.length - 1 ? '<div class="divider"></div>' : '');
+      transcriptScroll.appendChild(div);
+    });
+
+    transcriptScroll.scrollTop = transcriptScroll.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // --- Ask flow ---
+  function stopSpeaking() {
+    if (responseAudio) {
+      responseAudio.pause();
+      responseAudio = null;
+    }
+    setOrbState("idle");
+    stopVoiceprint();
+  }
+
+  async function startListening() {
+    if (orbState === "speaking") { stopSpeaking(); return; }
+    if (orbState !== "idle" || !sessionId) return;
+
+    if (!audio.paused) {
+      audio.pause();
+      playIcon.style.display = "block"; pauseIcon.style.display = "none";
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.addEventListener("dataavailable", function(e) {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      });
+
+      mediaRecorder.addEventListener("stop", function() {
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+        processQuestion(blob);
+      });
+
+      mediaRecorder.start();
+      setOrbState("listening");
+      startVoiceprint();
+      liveQuery.textContent = "Listening…";
+      liveQuery.classList.add("show");
+    } catch (e) {
+      console.error("Mic access denied:", e);
+    }
+  }
+
+  function stopListening() {
+    if (orbState !== "listening" || !mediaRecorder) return;
+    mediaRecorder.stop();
+    setOrbState("thinking");
+    stopVoiceprint();
+    liveQuery.textContent = "Processing…";
+  }
+
+  async function processQuestion(audioBlob) {
+    try {
+      const formData = new FormData();
+      formData.append("session_id", sessionId);
+      formData.append("audio", audioBlob, "audio.webm");
+
+      const resp = await fetch("/ask", { method: "POST", body: formData });
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        console.error("Ask failed:", err);
+        setOrbState("idle");
+        stopVoiceprint();
+        return;
+      }
+
+      const data = await resp.json();
+
+      addEntry(data.question, data.answer);
+      liveQuery.classList.remove("show");
+
+      setOrbState("speaking");
+      startVoiceprint();
+
+      const audioBytes = Uint8Array.from(atob(data.audio), function(c) { return c.charCodeAt(0); });
+      const blob = new Blob([audioBytes], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+
+      responseAudio = new Audio(url);
+      responseAudio.addEventListener("ended", function() {
+        URL.revokeObjectURL(url);
+        responseAudio = null;
+        setOrbState("idle");
+        stopVoiceprint();
+      });
+      responseAudio.play();
+
+    } catch (e) {
+      console.error("Process question failed:", e);
+      setOrbState("idle");
+      stopVoiceprint();
+    }
+  }
+
+  // Ask button — hold to talk
+  askBtn.addEventListener("pointerdown", function(e) { e.preventDefault(); startListening(); });
+  askBtn.addEventListener("pointerup", function(e) { e.preventDefault(); if (orbState === "listening") stopListening(); });
+  askBtn.addEventListener("pointerleave", function(e) { if (orbState === "listening") stopListening(); });
+  askBtn.addEventListener("contextmenu", function(e) { e.preventDefault(); });
+
+  // --- Session cleanup ---
+  function destroySession() {
+    if (!sessionId) return;
+    const blob = new Blob([JSON.stringify({ session_id: sessionId })], { type: "application/json" });
+    navigator.sendBeacon("/session/destroy", blob);
+    sessionId = null;
+  }
+
+  window.addEventListener("beforeunload", destroySession);
+})();
+</script>
+</body>
+</html>
