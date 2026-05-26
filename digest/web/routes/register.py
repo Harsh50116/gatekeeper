@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from flask import Blueprint, render_template, request, redirect, url_for
 
-from ...briefing.sources import CATEGORIES
+from ...briefing.sources import CATEGORIES, SUBCATEGORIES
 from ...briefing.summarizer import build_user_digest
 from ...db.store import register_user, get_user_items, save_digest, get_user_by_email, update_user_categories
 from ...services.tts import generate_audio
@@ -27,7 +27,7 @@ DISPLAY_NAMES = {
 
 @bp.route("/")
 def index():
-    return render_template("register.html", categories=CATEGORIES, error=None, email="", selected=[])
+    return render_template("register.html", categories=CATEGORIES, subcategories=SUBCATEGORIES, display_names=DISPLAY_NAMES, error=None, email="", selected=[])
 
 
 @bp.route("/register", methods=["POST"])
@@ -42,28 +42,44 @@ def register():
         error = "Select between 1 and 5 valid categories."
 
     if error:
-        return render_template("register.html", categories=CATEGORIES, error=error, email=email, selected=selected)
+        return render_template("register.html", categories=CATEGORIES, subcategories=SUBCATEGORIES, display_names=DISPLAY_NAMES, error=error, email=email, selected=selected)
 
     existing = get_user_by_email(email)
     if existing:
         prev_labels = [DISPLAY_NAMES.get(c, c.replace("_", " ").title()) for c in existing["categories"]]
         new_labels = [DISPLAY_NAMES.get(c, c.replace("_", " ").title()) for c in selected]
+        new_cats_detail = []
+        for cat in selected:
+            sub_str = request.form.get(f"subs_{cat}", "")
+            cat_subs = SUBCATEGORIES.get(cat, [])
+            if sub_str:
+                sub_ids = sub_str.split(",")
+                sub_names = [s["name"] for s in cat_subs if s["id"] in sub_ids]
+            else:
+                sub_names = [s["name"] for s in cat_subs]
+            new_cats_detail.append({
+                "name": DISPLAY_NAMES.get(cat, cat.replace("_", " ").title()),
+                "subs": sub_names,
+            })
         return render_template(
             "register.html",
             categories=CATEGORIES,
+            subcategories=SUBCATEGORIES,
+            display_names=DISPLAY_NAMES,
             error=None,
             email=email,
             selected=selected,
             show_modal=True,
             prev_categories=prev_labels,
             new_categories=new_labels,
+            new_cats_detail=new_cats_detail,
             user_id=existing["id"],
         )
 
     try:
         user_id = register_user(email, selected)
     except ValueError:
-        return render_template("register.html", categories=CATEGORIES, error="Something went wrong. Please try again.", email=email, selected=selected)
+        return render_template("register.html", categories=CATEGORIES, subcategories=SUBCATEGORIES, display_names=DISPLAY_NAMES, error="Something went wrong. Please try again.", email=email, selected=selected)
 
     threading.Thread(
         target=_send_welcome_digest,

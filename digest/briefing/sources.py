@@ -1,5 +1,43 @@
 CATEGORIES = ["tech_ai", "business_markets", "sports", "world_news", "science"]
 
+SUBCATEGORIES = {
+    "tech_ai": [
+        {"id": "ml", "name": "Machine learning"},
+        {"id": "llm", "name": "Local LLMs (Llama)"},
+        {"id": "ai", "name": "AI research"},
+        {"id": "cloud", "name": "Cloud & dev tools"},
+        {"id": "hw", "name": "Hardware"},
+    ],
+    "business_markets": [
+        {"id": "macro", "name": "Macro & Fed"},
+        {"id": "equities", "name": "Equities"},
+        {"id": "crypto", "name": "Crypto"},
+        {"id": "deals", "name": "M&A & deals"},
+        {"id": "earnings", "name": "Earnings"},
+    ],
+    "sports": [
+        {"id": "nba", "name": "NBA"},
+        {"id": "nfl", "name": "NFL"},
+        {"id": "soccer", "name": "Soccer"},
+        {"id": "tennis", "name": "Tennis"},
+        {"id": "olympics", "name": "Olympics"},
+    ],
+    "world_news": [
+        {"id": "geo", "name": "Geopolitics"},
+        {"id": "climate", "name": "Climate"},
+        {"id": "elections", "name": "Elections"},
+        {"id": "conflicts", "name": "Conflicts"},
+        {"id": "diplomacy", "name": "Diplomacy"},
+    ],
+    "science": [
+        {"id": "space", "name": "Space & astronomy"},
+        {"id": "bio", "name": "Biology & medicine"},
+        {"id": "physics", "name": "Physics"},
+        {"id": "climatesci", "name": "Climate science"},
+        {"id": "eng", "name": "Engineering"},
+    ],
+}
+
 ESPN_LEAGUES = [
     ("football", "nfl"),
     ("basketball", "nba"),
