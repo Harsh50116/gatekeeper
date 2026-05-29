@@ -189,16 +189,37 @@ def get_digest_by_date(user_id: str, digest_date: str) -> str | None:
 
 def get_user_items(user_id: str) -> dict[str, list[dict]]:
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    sub_prefs = get_user_subcategories(user_id)
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("""
-        SELECT i.title, i.summary, i.url, i.source, i.category, i.published
-        FROM items i
-        JOIN user_categories uc ON i.category = uc.category
-        WHERE uc.user_id = %s
-          AND i.published >= %s
-        ORDER BY i.category, i.published DESC
-    """, (user_id, cutoff))
+
+    if sub_prefs:
+        all_subs = []
+        for subs in sub_prefs.values():
+            all_subs.extend(subs)
+        cur.execute("""
+            SELECT i.title, i.summary, i.url, i.source, i.category, i.published
+            FROM items i
+            JOIN user_categories uc ON i.category = uc.category
+            WHERE uc.user_id = %s
+              AND i.published >= %s
+              AND (
+                  i.subcategory = ANY(%s)
+                  OR i.subcategory IS NULL
+                  OR i.category NOT IN (SELECT category FROM user_subcategories WHERE user_id = %s)
+              )
+            ORDER BY i.category, i.published DESC
+        """, (user_id, cutoff, all_subs, user_id))
+    else:
+        cur.execute("""
+            SELECT i.title, i.summary, i.url, i.source, i.category, i.published
+            FROM items i
+            JOIN user_categories uc ON i.category = uc.category
+            WHERE uc.user_id = %s
+              AND i.published >= %s
+            ORDER BY i.category, i.published DESC
+        """, (user_id, cutoff))
+
     rows = cur.fetchall()
     conn.close()
 
@@ -288,3 +309,56 @@ def get_user_subcategories(user_id: str) -> dict[str, list[str]]:
     for r in rows:
         result.setdefault(r["category"], []).append(r["subcategory"])
     return result
+
+
+def get_unclassified_items(category: str) -> list[dict]:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT id, title, summary
+        FROM items
+        WHERE category = %s
+          AND subcategory IS NULL
+          AND published >= %s
+    """, (category, cutoff))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def update_item_subcategories(updates: dict[str, str]) -> None:
+    if not updates:
+        return
+    conn = get_connection()
+    cur = conn.cursor()
+    for item_id, subcategory in updates.items():
+        cur.execute(
+            "UPDATE items SET subcategory = %s WHERE id = %s",
+            (subcategory, item_id),
+        )
+    conn.commit()
+    conn.close()
+
+
+def get_user_reddit_items(user_id: str) -> dict[str, list[dict]]:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    sub_prefs = get_user_subcategories(user_id)
+    if not sub_prefs:
+        return {}
+
+    items_by_category: dict[str, list[dict]] = {}
+    for category, subcategories in sub_prefs.items():
+        rows = get_reddit_items_by_category(category, subcategories, cutoff)
+        if rows:
+            items_by_category[category] = [
+                {
+                    "title": r["title"],
+                    "summary": r.get("body"),
+                    "url": r["url"],
+                    "source": f"r/{r['subreddit']}",
+                    "published": r["published"],
+                }
+                for r in rows
+            ]
+    return items_by_category

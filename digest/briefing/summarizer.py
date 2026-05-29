@@ -4,6 +4,8 @@ from collections import defaultdict
 
 import httpx
 
+from .sources import SUBCATEGORIES
+
 logger = logging.getLogger(__name__)
 
 HYPERBOLIC_URL = "https://api.hyperbolic.xyz/v1/chat/completions"
@@ -129,10 +131,75 @@ def generate_digest(category_summaries: dict[str, str], previous_digest: str | N
     return digest
 
 
-def build_user_digest(user_items: dict[str, list[dict]], previous_digest: str | None = None) -> str:
+CLASSIFY_SYSTEM = """You are a news classifier. For each numbered item, assign exactly one subcategory from the provided list.
+Respond with ONLY one line per item in the format: NUMBER:subcategory_id
+No explanations, no extra text."""
+
+CLASSIFY_BATCH_SIZE = 25
+
+
+def classify_rss_items(category: str, items: list[dict]) -> dict[str, str]:
+    sub_options = SUBCATEGORIES.get(category, [])
+    if not sub_options or not items:
+        return {}
+
+    options_str = ", ".join(f'{s["id"]} ({s["name"]})' for s in sub_options)
+    updates: dict[str, str] = {}
+    valid_ids = {s["id"] for s in sub_options}
+
+    for i in range(0, len(items), CLASSIFY_BATCH_SIZE):
+        batch = items[i:i + CLASSIFY_BATCH_SIZE]
+        lines = []
+        for j, item in enumerate(batch, 1):
+            line = f"{j}. {item['title']}"
+            if item.get("summary"):
+                line += f" — {item['summary'][:150]}"
+            lines.append(line)
+
+        prompt = (
+            f"Category: {category}\n"
+            f"Subcategories: {options_str}\n\n"
+            f"Items:\n" + "\n".join(lines)
+        )
+
+        try:
+            response = _call_llm(CLASSIFY_SYSTEM, prompt)
+        except Exception as e:
+            logger.warning("Classification LLM call failed for %s: %s", category, e)
+            continue
+
+        for line in response.strip().splitlines():
+            line = line.strip()
+            if ":" not in line:
+                continue
+            num_str, sub_id = line.split(":", 1)
+            sub_id = sub_id.strip()
+            try:
+                idx = int(num_str.strip()) - 1
+            except ValueError:
+                continue
+            if 0 <= idx < len(batch) and sub_id in valid_ids:
+                updates[batch[idx]["id"]] = sub_id
+
+    logger.info("Classified %d/%d items for %s", len(updates), len(items), category)
+    return updates
+
+
+def build_user_digest(
+    user_items: dict[str, list[dict]],
+    reddit_items: dict[str, list[dict]] | None = None,
+    previous_digest: str | None = None,
+) -> str:
+    all_categories = set(user_items.keys())
+    if reddit_items:
+        all_categories |= set(reddit_items.keys())
+
     category_summaries = {}
-    for category, items in user_items.items():
-        category_summaries[category] = summarize_category(category, items)
+    for category in all_categories:
+        merged = list(user_items.get(category, []))
+        if reddit_items:
+            merged.extend(reddit_items.get(category, []))
+        category_summaries[category] = summarize_category(category, merged)
 
     return generate_digest(category_summaries, previous_digest)
 

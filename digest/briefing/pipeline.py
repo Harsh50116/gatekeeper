@@ -46,7 +46,7 @@ def run_pipeline():
             logger.info("  %d items across %d categories", total_items, len(items))
 
             previous = get_previous_digest(user["id"])
-            digest_text = build_user_digest(items, previous)
+            digest_text = build_user_digest(items, previous_digest=previous)
             if not digest_text:
                 logger.warning("  Empty digest for %s, skipping", email)
                 continue
