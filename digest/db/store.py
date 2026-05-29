@@ -30,8 +30,8 @@ def insert_items(items: list[dict]) -> int:
     inserted = 0
     for item in items:
         cur.execute(
-            "INSERT INTO items (id, category, title, summary, url, published, source, fetched_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (id) DO NOTHING",
+            "INSERT INTO items (id, category, title, summary, url, published, source, fetched_at, subcategory) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (id) DO NOTHING",
             (
                 item["id"],
                 item["category"],
@@ -41,6 +41,7 @@ def insert_items(items: list[dict]) -> int:
                 item["published"],
                 item["source"],
                 item["fetched_at"],
+                item.get("subcategory"),
             ),
         )
         inserted += cur.rowcount
@@ -59,8 +60,15 @@ def get_user_by_email(email: str) -> dict | None:
         return None
     cur.execute("SELECT category FROM user_categories WHERE user_id = %s", (user["id"],))
     cats = [r["category"] for r in cur.fetchall()]
+    cur.execute(
+        "SELECT category, subcategory FROM user_subcategories WHERE user_id = %s",
+        (user["id"],),
+    )
+    subs: dict[str, list[str]] = {}
+    for r in cur.fetchall():
+        subs.setdefault(r["category"], []).append(r["subcategory"])
     conn.close()
-    return {"id": user["id"], "email": user["email"], "categories": cats}
+    return {"id": user["id"], "email": user["email"], "categories": cats, "subcategories": subs}
 
 
 def update_user_categories(user_id: str, categories: list[str]) -> None:
@@ -205,3 +213,78 @@ def get_user_items(user_id: str) -> dict[str, list[dict]]:
             "published": r["published"],
         })
     return items_by_category
+
+
+def insert_reddit_items(items: list[dict]) -> int:
+    if not items:
+        return 0
+    conn = get_connection()
+    cur = conn.cursor()
+    inserted = 0
+    for item in items:
+        cur.execute(
+            "INSERT INTO reddit_items (id, subreddit, title, body, url, upvotes, comment_count, category, subcategory, published, fetched_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (id) DO NOTHING",
+            (
+                item["id"],
+                item["subreddit"],
+                item["title"],
+                item.get("body"),
+                item["url"],
+                item.get("upvotes", 0),
+                item.get("comment_count", 0),
+                item["category"],
+                item["subcategory"],
+                item["published"],
+                item["fetched_at"],
+            ),
+        )
+        inserted += cur.rowcount
+    conn.commit()
+    conn.close()
+    return inserted
+
+
+def get_reddit_items_by_category(category: str, subcategories: list[str], cutoff: str) -> list[dict]:
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT title, body, url, subreddit, upvotes, comment_count, category, subcategory, published
+        FROM reddit_items
+        WHERE category = %s
+          AND subcategory = ANY(%s)
+          AND published >= %s
+        ORDER BY upvotes DESC
+    """, (category, subcategories, cutoff))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def save_user_subcategories(user_id: str, sub_selections: dict[str, list[str]]) -> None:
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM user_subcategories WHERE user_id = %s", (user_id,))
+    for category, subs in sub_selections.items():
+        for sub in subs:
+            cur.execute(
+                "INSERT INTO user_subcategories (user_id, category, subcategory) VALUES (%s, %s, %s)",
+                (user_id, category, sub),
+            )
+    conn.commit()
+    conn.close()
+
+
+def get_user_subcategories(user_id: str) -> dict[str, list[str]]:
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT category, subcategory FROM user_subcategories WHERE user_id = %s",
+        (user_id,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    result: dict[str, list[str]] = {}
+    for r in rows:
+        result.setdefault(r["category"], []).append(r["subcategory"])
+    return result

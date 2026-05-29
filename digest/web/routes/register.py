@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 
 from ...briefing.sources import CATEGORIES, SUBCATEGORIES
 from ...briefing.summarizer import build_user_digest
-from ...db.store import register_user, get_user_items, save_digest, get_user_by_email, update_user_categories
+from ...db.store import register_user, get_user_items, save_digest, get_user_by_email, update_user_categories, save_user_subcategories
 from ...services.tts import generate_audio
 from ...services.storage import upload_audio
 from ...services.mailer import send_digest_email
@@ -23,6 +23,17 @@ DISPLAY_NAMES = {
     "world_news": "World News",
     "science": "Science",
 }
+
+
+def _parse_subcategories(selected: list[str]) -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {}
+    for cat in selected:
+        sub_str = request.form.get(f"subs_{cat}", "")
+        if sub_str:
+            result[cat] = sub_str.split(",")
+        else:
+            result[cat] = [s["id"] for s in SUBCATEGORIES.get(cat, [])]
+    return result
 
 
 @bp.route("/")
@@ -48,6 +59,18 @@ def register():
     if existing:
         prev_labels = [DISPLAY_NAMES.get(c, c.replace("_", " ").title()) for c in existing["categories"]]
         new_labels = [DISPLAY_NAMES.get(c, c.replace("_", " ").title()) for c in selected]
+        prev_cats_detail = []
+        for cat in existing["categories"]:
+            cat_subs = SUBCATEGORIES.get(cat, [])
+            prev_sub_ids = existing["subcategories"].get(cat, [])
+            if prev_sub_ids:
+                sub_names = [s["name"] for s in cat_subs if s["id"] in prev_sub_ids]
+            else:
+                sub_names = [s["name"] for s in cat_subs]
+            prev_cats_detail.append({
+                "name": DISPLAY_NAMES.get(cat, cat.replace("_", " ").title()),
+                "subs": sub_names,
+            })
         new_cats_detail = []
         for cat in selected:
             sub_str = request.form.get(f"subs_{cat}", "")
@@ -61,6 +84,11 @@ def register():
                 "name": DISPLAY_NAMES.get(cat, cat.replace("_", " ").title()),
                 "subs": sub_names,
             })
+        sub_selections = {}
+        for cat in selected:
+            sub_str = request.form.get(f"subs_{cat}", "")
+            if sub_str:
+                sub_selections[cat] = sub_str
         return render_template(
             "register.html",
             categories=CATEGORIES,
@@ -72,12 +100,16 @@ def register():
             show_modal=True,
             prev_categories=prev_labels,
             new_categories=new_labels,
+            prev_cats_detail=prev_cats_detail,
             new_cats_detail=new_cats_detail,
+            sub_selections=sub_selections,
             user_id=existing["id"],
         )
 
+    sub_selections = _parse_subcategories(selected)
     try:
         user_id = register_user(email, selected)
+        save_user_subcategories(user_id, sub_selections)
     except ValueError:
         return render_template("register.html", categories=CATEGORIES, subcategories=SUBCATEGORIES, display_names=DISPLAY_NAMES, error="Something went wrong. Please try again.", email=email, selected=selected)
 
@@ -100,6 +132,7 @@ def register_update():
         return redirect(url_for("register.index"))
 
     update_user_categories(user_id, selected)
+    save_user_subcategories(user_id, _parse_subcategories(selected))
 
     threading.Thread(
         target=_send_welcome_digest,

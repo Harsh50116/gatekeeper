@@ -882,11 +882,24 @@
               <span>Previously</span>
               <span class="cnt">{{ prev_categories|length }} field{{ 's' if prev_categories|length != 1 }}</span>
             </div>
+            {% if prev_cats_detail %}
+            {% for cat in prev_cats_detail %}
+            <div style="margin-bottom: 10px;">
+              <div class="row-chips">
+                <span class="chip">{{ cat.name }}</span>
+              </div>
+              {% if cat.subs %}
+              <div class="chip-subs">{{ cat.subs | join(' &middot; ') }}</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
             <div class="row-chips">
               {% for cat in prev_categories %}
               <span class="chip">{{ cat }}</span>
               {% endfor %}
             </div>
+            {% endif %}
           </div>
 
           <div class="row-connector" aria-hidden="true">
@@ -931,6 +944,11 @@
             {% for cat in selected %}
             <input type="hidden" name="categories" value="{{ cat }}">
             {% endfor %}
+            {% if sub_selections %}
+            {% for cat, subs in sub_selections.items() %}
+            <input type="hidden" name="subs_{{ cat }}" value="{{ subs }}">
+            {% endfor %}
+            {% endif %}
             <button type="submit" class="btn-primary">
               <span>Update preferences</span>
               <span class="arrow">&rarr;</span>
