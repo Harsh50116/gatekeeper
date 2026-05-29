@@ -35,6 +35,41 @@ SUBCATEGORIES = {
     ],
 }
 
+SUBREDDIT_MAP = {
+    "tech_ai": {
+        "ai_ml": ["MachineLearning", "artificial"],
+        "cloud": ["devops", "aws"],
+        "llm": ["LocalLLaMA", "ChatGPT"],
+        "hw": ["hardware", "buildapc"],
+        "other": ["technology"],
+    },
+    "business_markets": {
+        "equities": ["wallstreetbets", "stocks"],
+        "crypto": ["CryptoCurrency", "Bitcoin"],
+        "macro": ["economics", "finance"],
+        "other": ["business"],
+    },
+    "sports": {
+        "cricket": ["Cricket"],
+        "nfl": ["nfl"],
+        "nba": ["nba"],
+        "soccer": ["soccer"],
+        "other": ["sports"],
+    },
+    "world_news": {
+        "us_politics": ["politics", "neutralpolitics"],
+        "geo": ["geopolitics", "worldnews"],
+        "climate": ["climate", "environment"],
+        "other": ["news"],
+    },
+    "science": {
+        "space": ["space", "astronomy"],
+        "bio": ["biology", "medicine"],
+        "physics_math": ["Physics", "math"],
+        "other": ["science"],
+    },
+}
+
 ESPN_LEAGUES = [
     ("football", "nfl"),
     ("basketball", "nba"),
