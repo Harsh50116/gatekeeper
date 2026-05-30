@@ -8,8 +8,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .main import run as run_scraper
-from ..db.store import get_all_users, get_user_items, get_previous_digest, save_digest
-from .summarizer import build_user_digest, clear_cache
+from .reddit import fetch_all as fetch_reddit
+from .sources import CATEGORIES
+from ..db.store import (
+    get_all_users, get_user_items, get_user_reddit_items,
+    get_previous_digest, save_digest,
+    insert_reddit_items, get_unclassified_items, update_item_subcategories,
+)
+from .summarizer import build_user_digest, classify_rss_items, clear_cache
 from ..services.tts import generate_audio, cleanup_old_audio
 from ..services.storage import upload_audio, delete_audio
 from ..services.mailer import send_digest_email
@@ -26,8 +32,21 @@ def run_pipeline():
     logger.info("Step 1: Cleaning up old local audio")
     cleanup_old_audio()
 
-    logger.info("Step 2: Scraping fresh data")
+    logger.info("Step 2a: Scraping RSS feeds")
     asyncio.run(run_scraper())
+
+    logger.info("Step 2b: Scraping Reddit")
+    reddit_raw = asyncio.run(fetch_reddit())
+    reddit_inserted = insert_reddit_items(reddit_raw)
+    logger.info("Reddit: fetched=%d inserted=%d", len(reddit_raw), reddit_inserted)
+
+    logger.info("Step 2c: Classifying RSS items")
+    for category in CATEGORIES:
+        unclassified = get_unclassified_items(category)
+        if unclassified:
+            logger.info("  %s: %d unclassified items", category, len(unclassified))
+            updates = classify_rss_items(category, unclassified)
+            update_item_subcategories(updates)
 
     users = get_all_users()
     logger.info("Step 3: Processing %d users", len(users))
@@ -38,15 +57,17 @@ def run_pipeline():
         logger.info("Processing user: %s", email)
         try:
             items = get_user_items(user["id"])
-            if not items:
+            reddit = get_user_reddit_items(user["id"])
+            if not items and not reddit:
                 logger.info("No items for %s, skipping", email)
                 continue
 
-            total_items = sum(len(v) for v in items.values())
-            logger.info("  %d items across %d categories", total_items, len(items))
+            total_rss = sum(len(v) for v in items.values())
+            total_reddit = sum(len(v) for v in reddit.values())
+            logger.info("  %d RSS + %d Reddit items", total_rss, total_reddit)
 
             previous = get_previous_digest(user["id"])
-            digest_text = build_user_digest(items, previous_digest=previous)
+            digest_text = build_user_digest(items, reddit_items=reddit, previous_digest=previous)
             if not digest_text:
                 logger.warning("  Empty digest for %s, skipping", email)
                 continue
@@ -55,7 +76,7 @@ def run_pipeline():
             audio_path = generate_audio(digest_text, email)
             audio_url = upload_audio(audio_path)
 
-            cats = ",".join(items.keys())
+            cats = ",".join(set(items.keys()) | set(reddit.keys()))
             date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             player_url = f"{APP_URL}/play?audio={audio_url}&cats={cats}&user={user['id']}&date={date_str}"
             send_digest_email(email, player_url)
