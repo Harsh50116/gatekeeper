@@ -67,8 +67,6 @@ async def fetch_subreddit(
             "title": title.strip(),
             "body": None,
             "url": link,
-            "upvotes": 0,
-            "comment_count": 0,
             "category": category,
             "subcategory": subcategory,
             "published": pub_dt.isoformat(),

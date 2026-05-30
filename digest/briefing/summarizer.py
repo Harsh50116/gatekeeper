@@ -1,10 +1,12 @@
 import logging
 import os
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
 from .sources import SUBCATEGORIES
+from ..db.store import get_rss_items_by_subcategory, get_reddit_items_by_category
 
 logger = logging.getLogger(__name__)
 
@@ -56,32 +58,45 @@ Write 3-5 key points capturing the most important stories. Use plain sentences, 
 Each point should be one clear sentence. Focus on what happened and why it matters."""
 
 
-def summarize_category(category: str, items: list[dict]) -> str:
-    if category in _pass1_cache:
-        return _pass1_cache[category]
-
+def _summarize_items(category: str, subcategory: str, items: list[dict]) -> str:
     if not items:
         return ""
 
     if len(items) <= 5:
         block = _format_items_block(items)
-        prompt = f"Category: {category}\n\n{block}"
-        summary = _call_llm(PASS1_SYSTEM, prompt)
-    else:
-        by_source: dict[str, list[dict]] = defaultdict(list)
-        for it in items:
-            by_source[it["source"]].append(it)
+        prompt = f"Category: {category}, Subcategory: {subcategory}\n\n{block}"
+        return _call_llm(PASS1_SYSTEM, prompt)
 
-        source_summaries = []
-        for source, source_items in by_source.items():
-            block = _format_items_block(source_items)
-            prompt = f"Category: {category}, Source: {source}\n\n{block}"
-            summary = _call_llm(PASS1_SYSTEM, prompt)
-            source_summaries.append(summary)
+    by_source: dict[str, list[dict]] = defaultdict(list)
+    for it in items:
+        by_source[it["source"]].append(it)
 
-        summary = "\n\n".join(source_summaries)
+    source_summaries = []
+    for source, source_items in by_source.items():
+        block = _format_items_block(source_items)
+        prompt = f"Category: {category}, Source: {source}\n\n{block}"
+        source_summaries.append(_call_llm(PASS1_SYSTEM, prompt))
 
-    _pass1_cache[category] = summary
+    return "\n\n".join(source_summaries)
+
+
+def summarize_subcategory(category: str, subcategory: str) -> str:
+    cache_key = f"{category}/{subcategory}"
+    if cache_key in _pass1_cache:
+        return _pass1_cache[cache_key]
+
+    rss = get_rss_items_by_subcategory(category, subcategory)
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    reddit_raw = get_reddit_items_by_category(category, [subcategory], cutoff)
+    reddit = [
+        {"title": r["title"], "summary": r.get("body"), "url": r["url"],
+         "source": f"r/{r['subreddit']}", "published": r["published"]}
+        for r in reddit_raw
+    ]
+
+    merged = rss + reddit
+    summary = _summarize_items(category, subcategory, merged)
+    _pass1_cache[cache_key] = summary
     return summary
 
 
@@ -186,20 +201,18 @@ def classify_rss_items(category: str, items: list[dict]) -> dict[str, str]:
 
 
 def build_user_digest(
-    user_items: dict[str, list[dict]],
-    reddit_items: dict[str, list[dict]] | None = None,
+    user_subcategories: dict[str, list[str]],
     previous_digest: str | None = None,
 ) -> str:
-    all_categories = set(user_items.keys())
-    if reddit_items:
-        all_categories |= set(reddit_items.keys())
-
-    category_summaries = {}
-    for category in all_categories:
-        merged = list(user_items.get(category, []))
-        if reddit_items:
-            merged.extend(reddit_items.get(category, []))
-        category_summaries[category] = summarize_category(category, merged)
+    category_summaries: dict[str, str] = {}
+    for category, subcategories in user_subcategories.items():
+        sub_summaries = []
+        for sub in subcategories:
+            summary = summarize_subcategory(category, sub)
+            if summary:
+                sub_summaries.append(summary)
+        if sub_summaries:
+            category_summaries[category] = "\n\n".join(sub_summaries)
 
     return generate_digest(category_summaries, previous_digest)
 

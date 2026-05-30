@@ -244,16 +244,14 @@ def insert_reddit_items(items: list[dict]) -> int:
     inserted = 0
     for item in items:
         cur.execute(
-            "INSERT INTO reddit_items (id, subreddit, title, body, url, upvotes, comment_count, category, subcategory, published, fetched_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (id) DO NOTHING",
+            "INSERT INTO reddit_items (id, subreddit, title, body, url, category, subcategory, published, fetched_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (id) DO NOTHING",
             (
                 item["id"],
                 item["subreddit"],
                 item["title"],
                 item.get("body"),
                 item["url"],
-                item.get("upvotes", 0),
-                item.get("comment_count", 0),
                 item["category"],
                 item["subcategory"],
                 item["published"],
@@ -270,12 +268,12 @@ def get_reddit_items_by_category(category: str, subcategories: list[str], cutoff
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
-        SELECT title, body, url, subreddit, upvotes, comment_count, category, subcategory, published
+        SELECT title, body, url, subreddit, category, subcategory, published
         FROM reddit_items
         WHERE category = %s
           AND subcategory = ANY(%s)
           AND published >= %s
-        ORDER BY upvotes DESC
+        ORDER BY published DESC
     """, (category, subcategories, cutoff))
     rows = cur.fetchall()
     conn.close()
@@ -309,6 +307,33 @@ def get_user_subcategories(user_id: str) -> dict[str, list[str]]:
     for r in rows:
         result.setdefault(r["category"], []).append(r["subcategory"])
     return result
+
+
+def get_rss_items_by_subcategory(category: str, subcategory: str) -> list[dict]:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    if subcategory == "other":
+        cur.execute("""
+            SELECT title, summary, url, source, published
+            FROM items
+            WHERE category = %s
+              AND (subcategory = 'other' OR subcategory IS NULL)
+              AND published >= %s
+            ORDER BY published DESC
+        """, (category, cutoff))
+    else:
+        cur.execute("""
+            SELECT title, summary, url, source, published
+            FROM items
+            WHERE category = %s
+              AND subcategory = %s
+              AND published >= %s
+            ORDER BY published DESC
+        """, (category, subcategory, cutoff))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def get_unclassified_items(category: str) -> list[dict]:

@@ -9,9 +9,9 @@ load_dotenv()
 
 from .main import run as run_scraper
 from .reddit import fetch_all as fetch_reddit
-from .sources import CATEGORIES
+from .sources import CATEGORIES, SUBCATEGORIES
 from ..db.store import (
-    get_all_users, get_user_items, get_user_reddit_items,
+    get_all_users, get_user_subcategories,
     get_previous_digest, save_digest,
     insert_reddit_items, get_unclassified_items, update_item_subcategories,
 )
@@ -56,18 +56,18 @@ def run_pipeline():
         email = user["email"]
         logger.info("Processing user: %s", email)
         try:
-            items = get_user_items(user["id"])
-            reddit = get_user_reddit_items(user["id"])
-            if not items and not reddit:
-                logger.info("No items for %s, skipping", email)
-                continue
+            user_subs = get_user_subcategories(user["id"])
+            if not user_subs:
+                user_subs = {
+                    cat: [s["id"] for s in SUBCATEGORIES.get(cat, [])]
+                    for cat in user["categories"]
+                }
 
-            total_rss = sum(len(v) for v in items.values())
-            total_reddit = sum(len(v) for v in reddit.values())
-            logger.info("  %d RSS + %d Reddit items", total_rss, total_reddit)
+            logger.info("  %d categories, %d subcategories",
+                        len(user_subs), sum(len(v) for v in user_subs.values()))
 
             previous = get_previous_digest(user["id"])
-            digest_text = build_user_digest(items, reddit_items=reddit, previous_digest=previous)
+            digest_text = build_user_digest(user_subs, previous_digest=previous)
             if not digest_text:
                 logger.warning("  Empty digest for %s, skipping", email)
                 continue
@@ -76,7 +76,7 @@ def run_pipeline():
             audio_path = generate_audio(digest_text, email)
             audio_url = upload_audio(audio_path)
 
-            cats = ",".join(set(items.keys()) | set(reddit.keys()))
+            cats = ",".join(user_subs.keys())
             date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             player_url = f"{APP_URL}/play?audio={audio_url}&cats={cats}&user={user['id']}&date={date_str}"
             send_digest_email(email, player_url)

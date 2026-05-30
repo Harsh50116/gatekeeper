@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 
 from ...briefing.sources import CATEGORIES, SUBCATEGORIES
 from ...briefing.summarizer import build_user_digest
-from ...db.store import register_user, get_user_items, save_digest, get_user_by_email, update_user_categories, save_user_subcategories
+from ...db.store import register_user, get_user_subcategories, save_digest, get_user_by_email, update_user_categories, save_user_subcategories
 from ...services.tts import generate_audio
 from ...services.storage import upload_audio
 from ...services.mailer import send_digest_email
@@ -146,13 +146,13 @@ def register_update():
 def _send_welcome_digest(user_id: str, email: str):
     try:
         print(f"[DIGEST] Starting welcome digest for {email}")
-        items = get_user_items(user_id)
-        if not items:
-            print(f"[DIGEST] No items yet for {email}, skipping")
+        user_subs = get_user_subcategories(user_id)
+        if not user_subs:
+            print(f"[DIGEST] No subcategory preferences for {email}, skipping")
             return
 
-        print(f"[DIGEST] Got {len(items)} categories, building digest...")
-        digest_text = build_user_digest(items)
+        print(f"[DIGEST] Building digest for {len(user_subs)} categories...")
+        digest_text = build_user_digest(user_subs)
         if not digest_text:
             print(f"[DIGEST] Empty digest for {email}")
             return
@@ -165,7 +165,7 @@ def _send_welcome_digest(user_id: str, email: str):
         audio_url = upload_audio(audio_path)
 
         app_url = os.environ.get("APP_URL", "http://localhost:8080")
-        cats = ",".join(items.keys())
+        cats = ",".join(user_subs.keys())
         date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         player_url = f"{app_url}/play?audio={audio_url}&cats={cats}&user={user_id}&date={date_str}"
         print(f"[DIGEST] Sending email...")
