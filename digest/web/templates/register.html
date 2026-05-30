@@ -27,12 +27,12 @@
 
   /* ═══ Variables: glass theme ═══ */
   body[data-theme="glass"] {
-    --bg: #ece3d3;
+    --bg: #f3ece0;
     --bg-2: rgba(255, 252, 246, 0.55);
     --bg-3: rgba(255, 252, 246, 0.38);
     --ink: #2a231d;
-    --ink-dim: #6b5f54;
-    --ink-faint: #9b8f81;
+    --ink-dim: #584d43;
+    --ink-faint: #7d7168;
     --ink-ghost: #c5b9a8;
     --accent: #c66a3c;
     --accent-rgb: 198, 106, 60;
@@ -212,16 +212,6 @@
   .hero-mark .m-sun { fill-opacity: 0.92; }
   body[data-theme="glass"] .hero-mark { color: var(--ink); }
 
-  .hero-footer {
-    display: flex; gap: 24px;
-    color: var(--ink-faint);
-    margin-top: 0;
-    font-size: 10px;
-  }
-  .hero-footer span { display: inline-flex; align-items: center; gap: 8px; }
-  .hero-footer .swatch {
-    width: 6px; height: 6px; border-radius: 999px; background: var(--ink-ghost);
-  }
   body[data-theme="glass"] .hero,
   body[data-theme="glass"] .form {
     background: rgba(255, 252, 246, 0.28);
@@ -343,23 +333,11 @@
   .cat-card .body { min-width: 0; }
   .cat-card .name {
     font-family: "Instrument Serif", Georgia, serif;
-    font-size: 18px;
+    font-size: 22px;
     color: var(--ink);
     line-height: 1.1;
   }
   .cat-card.checked .name em { font-style: italic; color: var(--accent); }
-  .cat-card .preview {
-    margin-top: 3px;
-    font-size: 11px;
-    color: var(--ink-faint);
-    line-height: 1.35;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    transition: color .2s;
-  }
-  .cat-card.checked .preview { color: var(--ink-dim); }
   .cat-card .check {
     width: 22px; height: 22px; border-radius: 999px;
     border: 1px solid var(--ink-faint);
@@ -422,15 +400,6 @@
     color: var(--ink-faint);
     font-size: 9px;
   }
-  .subs-head .all {
-    color: var(--ink-faint);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    text-decoration-color: var(--line-3);
-    cursor: pointer;
-    transition: color .15s;
-  }
-  .subs-head .all:hover { color: var(--ink); }
   .sub-chips {
     display: flex; flex-wrap: wrap; gap: 5px;
   }
@@ -722,7 +691,7 @@
     .hero-title { font-size: clamp(40px, 5.6vw, 80px); margin-top: 12px; }
     .hero { padding: 28px 40px 24px; gap: 14px; }
     .form { padding: 26px 44px 24px; }
-    .cat-card .name { font-size: 16px; }
+    .cat-card .name { font-size: 18px; }
     .cat-card .preview { font-size: 10.5px; }
     .email-input { font-size: 19px; padding-bottom: 8px; }
     .hero-mark { width: 100px; height: 100px; }
@@ -731,7 +700,7 @@
     .hero { padding: 32px 32px 24px; }
     .form { padding: 28px 32px 24px; }
     .hero-title { font-size: clamp(40px, 6.4vw, 76px); }
-    .cat-card .name { font-size: 16px; }
+    .cat-card .name { font-size: 18px; }
     .cat-card .preview { font-size: 10.5px; }
     .hero-mark { width: 116px; height: 116px; }
   }
@@ -748,7 +717,9 @@
     .chip { font-size: 16px; padding: 7px 14px; }
   }
   @media (max-width: 640px) {
-    .masthead .left .meta { display: none; }
+    .masthead { grid-template-columns: auto 1fr; gap: 0; }
+    .masthead .left { display: none; }
+    .masthead .right .meta { display: none; }
     .hero-title { font-size: clamp(40px, 11vw, 64px); }
     .action-bar { flex-direction: column; align-items: stretch; }
     .subscribe { justify-content: center; }
@@ -762,8 +733,6 @@
     <header class="masthead">
       <div class="left">
         <div class="meta caps mono">
-          <span>NO. CXLIII</span>
-          <span class="sep"></span>
           <span>EST. 2026</span>
         </div>
       </div>
@@ -798,16 +767,12 @@
             </svg>
           </div>
           <div class="hero-eyebrow caps">Subscribe &middot; No charge</div>
-          <h1 class="hero-title">A three-minute briefing, <em>delivered each morning.</em></h1>
+          <h1 class="hero-title">Your morning briefing, <em>delivered daily.</em></h1>
           <p class="hero-sub">
             Pick the fields that matter to you. Each morning we compile what happened and what's ahead &mdash; read by a real voice, sent before breakfast.
           </p>
         </div>
 
-        <div class="hero-footer caps mono">
-          <span><span class="swatch"></span>Sent daily at 7:00 AM</span>
-          <span><span class="swatch"></span>Unsubscribe anytime</span>
-        </div>
       </section>
 
       <!-- Right: Form -->
@@ -1036,16 +1001,12 @@
           '<span class="num">' + c.num + '</span>' +
           '<span class="body">' +
             '<span class="name">' + c.name + '</span>' +
-            '<span class="preview">' + c.preview + '</span>' +
           '</span>' +
           '<span class="check">' + CHECK_SVG + '</span>' +
         '</div>' +
         '<div class="cat-subs">' +
           '<div class="subs-head caps mono">' +
-            '<span>Topics · <span class="sub-count">' + onCount + '</span>/' + c.subs.length + ' included</span>' +
-            '<span class="all" data-action="all" data-cat="' + c.id + '">' +
-              (onCount === c.subs.length ? 'Customize' : 'Include all') +
-            '</span>' +
+            '<span><span class="sub-count">' + onCount + '</span>/' + c.subs.length + '</span>' +
           '</div>' +
           '<div class="sub-chips">' + chips + '</div>' +
         '</div>' +
