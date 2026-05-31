@@ -122,6 +122,16 @@ def get_all_users() -> list[dict]:
     ]
 
 
+def has_recent_items() -> bool:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM items WHERE published >= %s LIMIT 1", (cutoff,))
+    found = cur.fetchone() is not None
+    conn.close()
+    return found
+
+
 def get_all_recent_items() -> dict[str, list[dict]]:
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     conn = get_connection()

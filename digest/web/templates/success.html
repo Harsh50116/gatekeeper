@@ -1,156 +1,211 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digest — You're in</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-    <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brief — You're in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f3ece0;
+    --bg-2: rgba(255, 252, 246, 0.55);
+    --ink: #2a231d;
+    --ink-dim: #584d43;
+    --ink-faint: #7d7168;
+    --ink-ghost: #c5b9a8;
+    --accent: #c66a3c;
+    --accent-rgb: 198, 106, 60;
+    --line: rgba(42, 35, 29, 0.08);
+    --line-2: rgba(42, 35, 29, 0.14);
+    --line-3: rgba(42, 35, 29, 0.24);
+  }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #111;
-            color: #e8e0d6;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", system-ui, sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .caps { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; }
 
-        .container {
-            max-width: 520px;
-            padding: 40px 24px;
-            text-align: center;
-        }
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 55% 50% at 78% 22%, rgba(232, 168, 110, 0.85), transparent 65%),
+      radial-gradient(ellipse 45% 40% at 12% 80%, rgba(180, 198, 215, 0.65), transparent 70%),
+      radial-gradient(ellipse 40% 35% at 88% 88%, rgba(198, 106, 60, 0.45), transparent 65%),
+      radial-gradient(ellipse 35% 30% at 30% 18%, rgba(212, 195, 165, 0.6), transparent 70%);
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    opacity: 0.35;
+    background-image:
+      radial-gradient(rgba(42, 35, 29, 0.025) 1px, transparent 1px),
+      radial-gradient(rgba(42, 35, 29, 0.018) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    mix-blend-mode: multiply;
+  }
 
-        .logo {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.5rem;
-            font-weight: 400;
-            margin-bottom: 64px;
-        }
+  .masthead {
+    position: relative; z-index: 2;
+    border-bottom: 1px solid var(--line-2);
+    padding: 14px 48px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 22px; letter-spacing: -0.01em;
+  }
+  .brand .dot { color: var(--accent); }
 
-        .checkmark {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            border: 2px solid #c47a3a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 32px;
-            font-size: 1.5rem;
-            color: #c47a3a;
-        }
+  .container {
+    position: relative; z-index: 2;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 64px 28px 48px;
+    text-align: center;
+  }
 
-        h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 2rem;
-            font-weight: 400;
-            margin-bottom: 16px;
-        }
+  .checkmark {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: 2px solid var(--accent);
+    display: grid; place-items: center;
+    margin: 0 auto 28px;
+    color: var(--accent);
+  }
+  .checkmark svg { width: 24px; height: 24px; }
 
-        h1 em {
-            color: #c47a3a;
-            font-style: italic;
-        }
+  h1 {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 42px; font-weight: 400;
+    margin-bottom: 12px;
+  }
+  h1 em { color: var(--accent); font-style: italic; }
 
-        .subtitle {
-            font-size: 0.95rem;
-            font-weight: 300;
-            color: #9a9088;
-            margin-bottom: 48px;
-            line-height: 1.6;
-        }
+  .subtitle {
+    font-size: 14px; line-height: 1.6;
+    color: var(--ink-dim);
+    margin-bottom: 40px;
+  }
 
-        .divider {
-            height: 1px;
-            background: #2a2520;
-            margin: 32px 0;
-        }
+  .divider {
+    height: 1px;
+    background: var(--line-2);
+    margin: 28px 0;
+  }
 
-        .detail-label {
-            font-size: 0.7rem;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: #6b635b;
-            margin-bottom: 12px;
-        }
+  .detail-label {
+    font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
+    font-family: "JetBrains Mono", monospace;
+    color: var(--ink-faint);
+    margin-bottom: 8px;
+  }
 
-        .email-display {
-            font-size: 1rem;
-            font-weight: 300;
-            color: #e8e0d6;
-            margin-bottom: 32px;
-        }
+  .email-display {
+    font-size: 15px;
+    color: var(--ink);
+    margin-bottom: 32px;
+  }
 
-        .categories-list {
-            list-style: none;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 48px;
-        }
+  .cat-group {
+    text-align: left;
+    background: rgba(255, 252, 246, 0.45);
+    backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(42, 35, 29, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  .cat-name {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 20px;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .sub-chips {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .sub-chip {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 11px;
+    padding: 4px 10px 5px;
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    border-radius: 999px;
+    color: var(--ink);
+    background: rgba(var(--accent-rgb), 0.1);
+  }
 
-        .categories-list li {
-            font-family: 'Playfair Display', serif;
-            font-size: 0.9rem;
-            padding: 8px 20px;
-            border: 1px solid #2a2520;
-            border-radius: 24px;
-            color: #c47a3a;
-        }
+  .back-link {
+    display: inline-block;
+    margin-top: 32px;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    font-family: "JetBrains Mono", monospace;
+    color: var(--ink-faint);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--line-3);
+    transition: color .15s;
+  }
+  .back-link:hover { color: var(--ink); }
 
-        .bottom-info {
-            font-size: 0.7rem;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: #4a443e;
-            padding-top: 24px;
-            border-top: 1px solid #2a2520;
-        }
-
-        {% set display_names = {
-            'tech_ai': 'Tech & AI',
-            'business_markets': 'Business & Markets',
-            'sports': 'Sports',
-            'world_news': 'World News',
-            'science': 'Science'
-        } %}
-    </style>
+  @media (max-width: 640px) {
+    .masthead { padding: 14px 20px; }
+    .container { padding: 40px 20px 36px; }
+    h1 { font-size: 34px; }
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">Digest</div>
+  <header class="masthead">
+    <div class="brand">Brief<span class="dot">.</span></div>
+  </header>
 
-        <div class="checkmark">&#10003;</div>
-
-        <h1>You're <em>in.</em></h1>
-        <p class="subtitle">Your first audio briefing arrives tomorrow at 7:00 AM.</p>
-
-        <div class="divider"></div>
-        <div class="detail-label">Delivering to</div>
-        <div class="email-display">{{ email }}</div>
-
-        <div class="detail-label">Your fields</div>
-        <ul class="categories-list">
-            {% set display_names = {
-                'tech_ai': 'Tech & AI',
-                'business_markets': 'Business & Markets',
-                'sports': 'Sports',
-                'world_news': 'World News',
-                'science': 'Science'
-            } %}
-            {% for cat in categories %}
-            <li>{{ display_names.get(cat, cat | replace("_", " ") | title) }}</li>
-            {% endfor %}
-        </ul>
-
-        <div class="bottom-info">
-            Sent daily at 7:00 AM &middot; Unsubscribe anytime
-        </div>
+  <div class="container">
+    <div class="checkmark">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
+
+    <h1 class="serif">You're <em>in.</em></h1>
+    <p class="subtitle">Your first audio briefing is being prepared and will arrive shortly.</p>
+
+    <div class="divider"></div>
+
+    <div class="detail-label caps mono">Delivering to</div>
+    <div class="email-display">{{ email }}</div>
+
+    <div class="detail-label caps mono" style="margin-bottom: 14px;">Your fields</div>
+
+    {% for cat in categories %}
+    <div class="cat-group">
+      <div class="cat-name">{{ display_names.get(cat, cat | replace("_", " ") | title) }}</div>
+      {% set cat_subs = subcategories.get(cat, []) %}
+      {% set selected_subs = user_subs.get(cat, []) %}
+      {% if selected_subs and cat_subs %}
+      <div class="sub-chips">
+        {% for s in cat_subs %}
+          {% if s.id in selected_subs %}
+          <span class="sub-chip">{{ s.name }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% elif cat_subs %}
+      <div class="sub-chips">
+        {% for s in cat_subs %}
+        <span class="sub-chip">{{ s.name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <a href="/" class="back-link">Edit preferences</a>
+  </div>
 </body>
 </html>

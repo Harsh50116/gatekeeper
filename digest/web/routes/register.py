@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import threading
@@ -7,7 +8,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 
 from ...briefing.sources import CATEGORIES, SUBCATEGORIES
 from ...briefing.summarizer import build_user_digest
-from ...db.store import register_user, get_user_subcategories, save_digest, get_user_by_email, update_user_categories, save_user_subcategories
+from ...db.store import register_user, get_user_subcategories, save_digest, get_user_by_email, update_user_categories, save_user_subcategories, has_recent_items
 from ...services.tts import generate_audio
 from ...services.storage import upload_audio
 from ...services.mailer import send_digest_email
@@ -119,7 +120,7 @@ def register():
         daemon=True,
     ).start()
 
-    return redirect(url_for("register.success", email=email, cats=",".join(selected)))
+    return redirect(url_for("register.success", email=email, cats=",".join(selected), subs=json.dumps(sub_selections)))
 
 
 @bp.route("/register/update", methods=["POST"])
@@ -140,12 +141,40 @@ def register_update():
         daemon=True,
     ).start()
 
-    return redirect(url_for("register.success", email=email, cats=",".join(selected)))
+    return redirect(url_for("register.success", email=email, cats=",".join(selected), subs=json.dumps(_parse_subcategories(selected))))
+
+
+def _run_scraper_if_needed():
+    if has_recent_items():
+        print("[DIGEST] Recent items found in DB, skipping scraper")
+        return
+    print("[DIGEST] No recent items in DB, running full scraper...")
+    import asyncio
+    from ...briefing.main import run as run_scraper
+    from ...briefing.reddit import fetch_all as fetch_reddit
+    from ...briefing.sources import CATEGORIES as ALL_CATS
+    from ...briefing.summarizer import classify_rss_items
+    from ...db.store import insert_reddit_items, get_unclassified_items, update_item_subcategories
+
+    asyncio.run(run_scraper())
+
+    reddit_raw = asyncio.run(fetch_reddit())
+    insert_reddit_items(reddit_raw)
+    print(f"[DIGEST] Reddit: fetched {len(reddit_raw)} posts")
+
+    for category in ALL_CATS:
+        unclassified = get_unclassified_items(category)
+        if unclassified:
+            updates = classify_rss_items(category, unclassified)
+            update_item_subcategories(updates)
+    print("[DIGEST] Scraper complete")
 
 
 def _send_welcome_digest(user_id: str, email: str):
     try:
         print(f"[DIGEST] Starting welcome digest for {email}")
+        _run_scraper_if_needed()
+
         user_subs = get_user_subcategories(user_id)
         if not user_subs:
             print(f"[DIGEST] No subcategory preferences for {email}, skipping")
@@ -181,4 +210,16 @@ def _send_welcome_digest(user_id: str, email: str):
 def success():
     email = request.args.get("email", "")
     cats = request.args.get("cats", "").split(",")
-    return render_template("success.html", email=email, categories=cats)
+    subs_raw = request.args.get("subs", "{}")
+    try:
+        user_subs = json.loads(subs_raw)
+    except (json.JSONDecodeError, TypeError):
+        user_subs = {}
+    return render_template(
+        "success.html",
+        email=email,
+        categories=cats,
+        user_subs=user_subs,
+        subcategories=SUBCATEGORIES,
+        display_names=DISPLAY_NAMES,
+    )

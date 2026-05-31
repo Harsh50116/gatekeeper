@@ -4,6 +4,7 @@ __pycache__/
 *.db
 .env
 digest/audio/
+digest/services/audio/
 backups/
 
 CLAUDE.md
