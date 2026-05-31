@@ -217,12 +217,12 @@
     color: var(--ink); background: rgba(255,255,255,0.04);
     border: 1px solid var(--line-2);
     transition: background .2s, border-color .2s, transform .15s, box-shadow .25s;
-    touch-action: none; user-select: none; flex: 0 0 auto;
+    touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; flex: 0 0 auto;
   }
   .ask-btn:hover { background: rgba(var(--accent-rgb), 0.08); border-color: rgba(var(--accent-rgb), 0.35); }
   .ask-btn.active { background: rgba(var(--accent-rgb), 0.18); border-color: var(--accent); box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.35); }
-  .ask-btn .mic { color: var(--accent); display: grid; place-items: center; }
-  .ask-btn .label { font-size: 13px; letter-spacing: 0.04em; color: var(--ink-dim); }
+  .ask-btn .mic { color: var(--accent); display: grid; place-items: center; pointer-events: none; }
+  .ask-btn .label { font-size: 13px; letter-spacing: 0.04em; color: var(--ink-dim); pointer-events: none; }
   .ask-btn.active .label { color: var(--ink); }
   .ask-btn .kbd {
     font-size: 10px; letter-spacing: 0.06em; color: var(--ink-faint);
