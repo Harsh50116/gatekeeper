@@ -728,9 +728,12 @@
   }
 
   // Ask button — hold to talk
-  askBtn.addEventListener("pointerdown", function(e) { e.preventDefault(); startListening(); });
-  askBtn.addEventListener("pointerup", function(e) { e.preventDefault(); if (orbState === "listening") stopListening(); });
-  askBtn.addEventListener("pointerleave", function(e) { if (orbState === "listening") stopListening(); });
+  askBtn.addEventListener("touchstart", function(e) { e.preventDefault(); startListening(); }, { passive: false });
+  askBtn.addEventListener("touchend", function(e) { e.preventDefault(); if (orbState === "listening") stopListening(); }, { passive: false });
+  askBtn.addEventListener("touchcancel", function(e) { if (orbState === "listening") stopListening(); });
+  askBtn.addEventListener("pointerdown", function(e) { if (e.pointerType === "mouse") { e.preventDefault(); startListening(); } });
+  askBtn.addEventListener("pointerup", function(e) { if (e.pointerType === "mouse") { e.preventDefault(); if (orbState === "listening") stopListening(); } });
+  askBtn.addEventListener("pointerleave", function(e) { if (e.pointerType === "mouse" && orbState === "listening") stopListening(); });
   askBtn.addEventListener("contextmenu", function(e) { e.preventDefault(); });
 
   // --- Session cleanup ---
