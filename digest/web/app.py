@@ -18,4 +18,5 @@ app.register_blueprint(ask_bp)
 if __name__ == "__main__":
     import sys
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
-    app.run(debug=True, port=port)
+    host = os.environ.get("HOST", "127.0.0.1")
+    app.run(debug=True, host=host, port=port)

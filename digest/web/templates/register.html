@@ -540,13 +540,14 @@
 
   .modal {
     width: min(580px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
     background: var(--bg);
     border: 1px solid var(--line-2);
     border-radius: 4px;
     box-shadow: 0 40px 80px rgba(0,0,0,0.6);
     position: relative;
     animation: modal-in .45s cubic-bezier(.22,.61,.36,1);
-    overflow: hidden;
   }
   body[data-theme="glass"] .modal {
     background: rgba(255, 252, 246, 0.82);
@@ -854,7 +855,7 @@
                 <span class="chip">{{ cat.name }}</span>
               </div>
               {% if cat.subs %}
-              <div class="chip-subs">{{ cat.subs | join(' &middot; ') }}</div>
+              <div class="chip-subs">{{ cat.subs | join(' · ') }}</div>
               {% endif %}
             </div>
             {% endfor %}
@@ -885,7 +886,7 @@
                 <span class="chip">{{ cat.name }}</span>
               </div>
               {% if cat.subs %}
-              <div class="chip-subs">{{ cat.subs | join(' &middot; ') }}</div>
+              <div class="chip-subs">{{ cat.subs | join(' · ') }}</div>
               {% endif %}
             </div>
             {% endfor %}
