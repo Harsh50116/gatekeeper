@@ -1,0 +1,1 @@
+Answer should come directly from the digest without needing search: Celtics beat Heat 112-98 in game 5. Jaylen Brown scored 34 points. This tests whether the model can extract a direct fact from the digest context.

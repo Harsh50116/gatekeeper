@@ -1,0 +1,5 @@
+Good morning. In tech news, Apple unveiled its new M5 chip at a surprise event yesterday, promising double the machine learning performance of the M4. The chip will power the next MacBook Pro lineup expected in September. Separately, Microsoft announced it's investing another ten billion dollars into its cloud infrastructure across Europe, building three new data centers in Germany, France, and Spain.
+
+In world news, the European Union reached a landmark agreement on AI regulation, requiring all companies deploying AI systems in the EU to register with a new oversight body by January twenty twenty-seven. The regulation includes fines of up to six percent of global revenue for non-compliance. China responded by announcing its own competing framework, emphasizing what it calls "sovereign AI governance."
+
+In markets, the S&P five hundred closed at an all-time high of fifty-eight hundred and forty-two, driven primarily by tech earnings. Tesla shares dropped eight percent after missing delivery targets for the third consecutive quarter.

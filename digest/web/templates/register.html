@@ -1,0 +1,1108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brief — Subscribe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* ═══ Variables: dark theme (base) ═══ */
+  :root {
+    --bg: #0a0807;
+    --bg-2: #110d0b;
+    --bg-3: #17120f;
+    --ink: #ece4d8;
+    --ink-dim: #a89f93;
+    --ink-faint: #5d5349;
+    --ink-ghost: #3a342e;
+    --accent: #d4895c;
+    --accent-rgb: 212, 137, 92;
+    --accent-soft: #c9744a;
+    --line: rgba(236, 228, 216, 0.06);
+    --line-2: rgba(236, 228, 216, 0.12);
+    --line-3: rgba(236, 228, 216, 0.20);
+  }
+
+  /* ═══ Variables: glass theme ═══ */
+  body[data-theme="glass"] {
+    --bg: #f3ece0;
+    --bg-2: rgba(255, 252, 246, 0.55);
+    --bg-3: rgba(255, 252, 246, 0.38);
+    --ink: #2a231d;
+    --ink-dim: #584d43;
+    --ink-faint: #7d7168;
+    --ink-ghost: #c5b9a8;
+    --accent: #c66a3c;
+    --accent-rgb: 198, 106, 60;
+    --accent-soft: #d68258;
+    --line: rgba(42, 35, 29, 0.08);
+    --line-2: rgba(42, 35, 29, 0.14);
+    --line-3: rgba(42, 35, 29, 0.24);
+  }
+
+  /* ═══ Reset & base ═══ */
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", system-ui, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .caps { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; }
+  button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
+  button:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+  /* ═══ Paper grain overlay ═══ */
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(rgba(236,228,216,0.012) 1px, transparent 1px),
+      radial-gradient(rgba(236,228,216,0.008) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 1px 2px;
+    opacity: 0.9;
+    z-index: 1;
+    mix-blend-mode: screen;
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 75% 30%, rgba(var(--accent-rgb), 0.05), transparent 50%),
+      radial-gradient(ellipse at 10% 80%, rgba(var(--accent-rgb), 0.03), transparent 50%);
+    z-index: 0;
+  }
+  body[data-theme="glass"]::before {
+    opacity: 0.35;
+    background-image:
+      radial-gradient(rgba(42, 35, 29, 0.025) 1px, transparent 1px),
+      radial-gradient(rgba(42, 35, 29, 0.018) 1px, transparent 1px);
+    mix-blend-mode: multiply;
+  }
+  body[data-theme="glass"]::after {
+    background:
+      radial-gradient(ellipse 55% 50% at 78% 22%, rgba(232, 168, 110, 0.85), transparent 65%),
+      radial-gradient(ellipse 45% 40% at 12% 80%, rgba(180, 198, 215, 0.65), transparent 70%),
+      radial-gradient(ellipse 40% 35% at 88% 88%, rgba(198, 106, 60, 0.45), transparent 65%),
+      radial-gradient(ellipse 35% 30% at 30% 18%, rgba(212, 195, 165, 0.6), transparent 70%);
+    z-index: 0;
+  }
+
+  /* ═══ Masthead ═══ */
+  .masthead {
+    position: relative; z-index: 2;
+    border-bottom: 1px solid var(--line-2);
+    padding: 14px 48px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 24px;
+    flex: 0 0 auto;
+  }
+  .masthead .left, .masthead .right {
+    display: flex; align-items: center; gap: 24px;
+  }
+  .masthead .right { justify-content: flex-end; }
+  .masthead .meta {
+    color: var(--ink-faint);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .masthead .meta .sep { width: 3px; height: 3px; border-radius: 999px; background: var(--ink-ghost); }
+  .masthead .brand {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 26px; letter-spacing: -0.01em; line-height: 1;
+    text-align: center;
+  }
+  .masthead .brand .dot { color: var(--accent); }
+  .toggle {
+    width: 44px; height: 22px; border-radius: 999px;
+    background: rgba(255,255,255,0.06); position: relative;
+  }
+  .toggle .knob {
+    position: absolute; top: 3px;
+    width: 16px; height: 16px; border-radius: 999px;
+    background: var(--accent); box-shadow: 0 0 8px var(--accent);
+    transition: left .2s ease;
+    left: 3px;
+  }
+  body[data-theme="glass"] .toggle {
+    background: rgba(42, 35, 29, 0.08);
+    border: 1px solid rgba(42, 35, 29, 0.1);
+  }
+  body[data-theme="glass"] .toggle .knob { left: 24px; }
+  body[data-theme="glass"] .masthead {
+    background: rgba(255, 252, 246, 0.45);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 1px 0 rgba(42, 35, 29, 0.06);
+  }
+
+  /* ═══ Page grid ═══ */
+  .page {
+    position: relative; z-index: 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: calc(100vh - 57px);
+    width: 100%;
+    overflow: hidden;
+  }
+  @media (min-width: 1280px) {
+    .hero { padding: 56px clamp(56px, 6vw, 140px) 44px; }
+    .form { padding: 48px clamp(56px, 6vw, 140px) 40px; }
+  }
+  @media (min-width: 1800px) {
+    .hero-title { font-size: clamp(80px, 6.4vw, 132px); max-width: none; }
+    .hero-sub { font-size: 15px; max-width: 48ch; }
+  }
+
+  /* ═══ Left: Hero ═══ */
+  .hero {
+    position: relative;
+    padding: 44px 48px 32px;
+    border-right: 1px solid var(--line-2);
+    display: flex; flex-direction: column; justify-content: space-between;
+    gap: 20px;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .hero-eyebrow {
+    color: var(--accent);
+    display: inline-flex; align-items: center; gap: 12px;
+  }
+  .hero-eyebrow::before {
+    content: ""; width: 24px; height: 1px; background: var(--accent);
+  }
+  .hero-title {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: clamp(48px, 7.2vw, 112px);
+    line-height: 0.96;
+    letter-spacing: -0.02em;
+    margin: 16px 0 0;
+    max-width: none;
+    text-wrap: balance;
+  }
+  .hero-title em { font-style: italic; color: var(--accent); }
+  .hero-sub {
+    margin-top: 16px;
+    font-size: 14px; line-height: 1.5;
+    color: var(--ink-dim);
+    max-width: 44ch;
+  }
+
+  /* Hero mark — top position */
+  .hero-mark {
+    width: 144px; height: 144px;
+    color: var(--ink-dim);
+    flex: 0 0 auto;
+    margin-left: -8px;
+  }
+  .hero-mark svg { width: 100%; height: 100%; display: block; }
+  .hero-mark .m-frame { stroke-opacity: 0.22; }
+  .hero-mark .m-horizon { stroke-opacity: 0.4; }
+  .hero-mark .m-sun { fill-opacity: 0.92; }
+  body[data-theme="glass"] .hero-mark { color: var(--ink); }
+
+  body[data-theme="glass"] .hero,
+  body[data-theme="glass"] .form {
+    background: rgba(255, 252, 246, 0.28);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  }
+  body[data-theme="glass"] .hero { border-right: 1px solid rgba(255, 255, 255, 0.45); }
+
+  /* ═══ Right: Form ═══ */
+  .form {
+    padding: 36px 52px 30px;
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .form-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex; flex-direction: column; gap: 22px;
+    padding-right: 8px;
+    margin-right: -8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-2) transparent;
+  }
+  .form-scroll::-webkit-scrollbar { width: 6px; }
+  .form-scroll::-webkit-scrollbar-track { background: transparent; }
+  .form-scroll::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+  .form-scroll::-webkit-scrollbar-thumb:hover { background: var(--line-3); }
+  body[data-theme="glass"] .form-scroll::-webkit-scrollbar-thumb { background: rgba(42, 35, 29, 0.18); }
+  .step-label {
+    display: flex; align-items: baseline; gap: 12px;
+    color: var(--ink-faint);
+    margin-bottom: 10px;
+  }
+  .step-label .n {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 22px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .step-label .t {
+    font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
+  }
+  .step-label .hint {
+    margin-left: auto;
+    font-size: 11px; color: var(--ink-faint);
+  }
+
+  /* Email input */
+  .email-wrap { position: relative; }
+  .email-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--line-2);
+    color: var(--ink);
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 22px;
+    padding: 4px 0 10px;
+    transition: border-color .2s;
+    outline: none;
+  }
+  .email-input::placeholder { color: var(--ink-faint); }
+  .email-input:focus { border-bottom-color: var(--accent); }
+  .email-wrap .underline-glow {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, var(--accent), transparent 60%);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s ease;
+  }
+  .email-input:focus + .underline-glow { transform: scaleX(1); }
+  body[data-theme="glass"] .email-input { caret-color: var(--accent); }
+
+  /* ═══ Category cards ═══ */
+  .cats { display: grid; gap: 7px; }
+  .cat-card {
+    position: relative;
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.012);
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    text-align: left;
+    overflow: hidden;
+    width: 100%;
+  }
+  .cat-card .cat-main {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 18px;
+    padding: 9px 18px 9px 14px;
+    align-items: center;
+  }
+  .cat-card:hover {
+    border-color: var(--line-3);
+    background: rgba(255,255,255,0.025);
+  }
+  .cat-card.checked {
+    border-color: rgba(var(--accent-rgb), 0.45);
+    background: rgba(var(--accent-rgb), 0.05);
+  }
+  .cat-card.checked::before {
+    content: ""; position: absolute; top: -1px; bottom: -1px; left: -1px;
+    width: 2px;
+    background: var(--accent);
+    border-radius: 4px 0 0 4px;
+  }
+  .cat-card .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    width: 24px; text-align: center;
+  }
+  .cat-card.checked .num { color: var(--accent); }
+  .cat-card .body { min-width: 0; }
+  .cat-card .name {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 22px;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .cat-card.checked .name em { font-style: italic; color: var(--accent); }
+  .cat-card .check {
+    width: 22px; height: 22px; border-radius: 999px;
+    border: 1px solid var(--ink-faint);
+    display: grid; place-items: center;
+    color: transparent;
+    transition: background .2s, border-color .2s, color .2s, box-shadow .2s;
+    flex: 0 0 auto;
+  }
+  .cat-card.checked .check {
+    background: var(--accent); border-color: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
+  }
+
+  /* Glass category cards */
+  body[data-theme="glass"] .cat-card {
+    background: rgba(255, 252, 246, 0.45);
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 1px 2px rgba(42, 35, 29, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  body[data-theme="glass"] .cat-card:hover {
+    background: rgba(255, 255, 250, 0.6);
+  }
+  body[data-theme="glass"] .cat-card.checked {
+    background: rgba(198, 106, 60, 0.09);
+    border-color: rgba(198, 106, 60, 0.4);
+    box-shadow: 0 1px 2px rgba(198, 106, 60, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  body[data-theme="glass"] .cat-card .check {
+    border-color: var(--ink-faint);
+    background: rgba(255, 255, 255, 0.4);
+  }
+  body[data-theme="glass"] .cat-card.checked .check {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(198, 106, 60, 0.18);
+  }
+
+  /* ═══ Subcategory chips ═══ */
+  .cat-subs {
+    max-height: 0;
+    opacity: 0;
+    padding: 0 18px 0 46px;
+    border-top: 0 solid var(--line);
+    transition: max-height .35s ease, opacity .25s ease, padding .3s ease;
+    overflow: hidden;
+  }
+  .cat-card.checked .cat-subs {
+    max-height: 400px;
+    opacity: 1;
+    padding: 10px 18px 14px 46px;
+    border-top: 1px dashed var(--line);
+  }
+  .subs-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 8px;
+    color: var(--ink-faint);
+    font-size: 9px;
+  }
+  .sub-chips {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .sub-chip {
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 10px 5px;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    color: var(--ink);
+    background: rgba(var(--accent-rgb), 0.1);
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s, opacity .15s;
+    display: inline-flex; align-items: center; gap: 5px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .sub-chip::before {
+    content: "\00d7";
+    font-size: 11px;
+    color: var(--accent);
+    opacity: 0.7;
+    transition: transform .2s;
+  }
+  .sub-chip.off {
+    background: transparent;
+    color: var(--ink-faint);
+    border-color: var(--line-2);
+    opacity: 0.65;
+  }
+  .sub-chip.off::before {
+    content: "+";
+    color: var(--ink-faint);
+  }
+  .sub-chip:hover { border-color: rgba(var(--accent-rgb), 0.6); }
+
+  /* Glass sub chips */
+  body[data-theme="glass"] .sub-chip {
+    background: rgba(198, 106, 60, 0.12);
+    border-color: rgba(198, 106, 60, 0.28);
+    color: var(--ink);
+  }
+  body[data-theme="glass"] .sub-chip.off {
+    background: rgba(255, 252, 246, 0.45);
+    border-color: rgba(42, 35, 29, 0.12);
+    color: var(--ink-faint);
+  }
+  body[data-theme="glass"] .sub-chip::before { color: var(--accent); }
+  body[data-theme="glass"] .sub-chip.off::before { color: var(--ink-faint); }
+
+  /* ═══ Action bar ═══ */
+  .action-bar {
+    flex: 0 0 auto;
+    margin-top: 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-2);
+  }
+  .counter {
+    display: flex; align-items: baseline; gap: 12px;
+    color: var(--ink-faint);
+  }
+  .counter .num {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .counter .label {
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .subscribe {
+    display: inline-flex; align-items: center; gap: 18px;
+    font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--ink);
+    padding: 12px 22px;
+    border: 1px solid var(--accent);
+    background: rgba(var(--accent-rgb), 0.08);
+    border-radius: 999px;
+    transition: background .2s, box-shadow .25s, transform .15s, opacity .2s;
+    cursor: pointer;
+  }
+  .subscribe:hover {
+    background: rgba(var(--accent-rgb), 0.2);
+    box-shadow: 0 0 32px rgba(var(--accent-rgb), 0.3);
+  }
+  .subscribe:active { transform: scale(0.98); }
+  .subscribe[disabled] {
+    opacity: 0.4; cursor: not-allowed;
+    border-color: var(--ink-ghost);
+    background: transparent;
+    color: var(--ink-faint);
+    box-shadow: none;
+  }
+  .subscribe .arrow { color: var(--accent); }
+  .subscribe[disabled] .arrow { color: var(--ink-ghost); }
+  body[data-theme="glass"] .action-bar { border-top-color: rgba(42, 35, 29, 0.12); }
+  body[data-theme="glass"] .subscribe {
+    background: rgba(198, 106, 60, 0.16);
+    backdrop-filter: blur(8px);
+    border-color: rgba(198, 106, 60, 0.55);
+    box-shadow: 0 1px 2px rgba(42, 35, 29, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  body[data-theme="glass"] .subscribe:hover {
+    background: rgba(198, 106, 60, 0.28);
+    box-shadow: 0 8px 24px rgba(198, 106, 60, 0.22);
+  }
+  body[data-theme="glass"] .subscribe[disabled] {
+    background: rgba(255, 252, 246, 0.4);
+    border-color: rgba(42, 35, 29, 0.12);
+    color: var(--ink-faint);
+  }
+  body[data-theme="glass"] .subscribe[disabled] .arrow { color: var(--ink-ghost); }
+
+  /* ═══ Error ═══ */
+  .error {
+    color: var(--accent);
+    font-size: 13px;
+    padding: 8px 0 12px;
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+  }
+
+  /* ═══ Modal ═══ */
+  .modal-veil {
+    position: fixed; inset: 0; z-index: 100;
+    display: grid; place-items: center;
+    background: rgba(8, 6, 5, 0.25);
+    animation: veil-in .35s ease-out;
+  }
+  body[data-theme="glass"] .modal-veil {
+    background: rgba(42, 35, 29, 0.18);
+  }
+  @keyframes veil-in { from { opacity: 0; } to { opacity: 1; } }
+  body.modal-open #digestForm { filter: blur(14px) brightness(0.7); transition: filter .3s ease; }
+  body[data-theme="glass"].modal-open #digestForm { filter: blur(14px) brightness(0.85); }
+
+  .modal {
+    width: min(580px, calc(100vw - 48px));
+    background: var(--bg);
+    border: 1px solid var(--line-2);
+    border-radius: 4px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+    position: relative;
+    animation: modal-in .45s cubic-bezier(.22,.61,.36,1);
+    overflow: hidden;
+  }
+  body[data-theme="glass"] .modal {
+    background: rgba(255, 252, 246, 0.82);
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 40px 80px rgba(42, 35, 29, 0.25);
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .modal-head { padding: 36px 44px 0; }
+  .modal-body { padding: 0 44px; }
+  .modal-foot { padding: 0 44px 24px; }
+
+  .modal-close {
+    position: absolute; top: 18px; right: 18px;
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    color: var(--ink-faint); background: none; border: none; cursor: pointer;
+    border-radius: 4px; transition: color .2s, background .2s;
+  }
+  .modal-close:hover { color: var(--ink); background: rgba(255,255,255,0.04); }
+  body[data-theme="glass"] .modal-close:hover { background: rgba(42, 35, 29, 0.06); }
+
+  .eyebrow {
+    font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--accent);
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .eyebrow::before { content: ""; width: 18px; height: 1px; background: var(--accent); }
+
+  .modal-title {
+    margin: 16px 0 0;
+    font-family: "Instrument Serif", Georgia, serif;
+    font-weight: 400; font-size: 38px; line-height: 1.05;
+    letter-spacing: -0.01em; color: var(--ink);
+  }
+  .modal-title em { font-style: italic; color: var(--accent); }
+
+  .modal-sub {
+    margin: 12px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-dim);
+    max-width: 460px;
+  }
+  .modal-sub .email-pill {
+    color: var(--ink);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px; padding: 1px 6px;
+    background: rgba(var(--accent-rgb), 0.06); border-radius: 3px;
+  }
+
+  .rows { margin-top: 32px; position: relative; }
+  .row { padding: 20px 0; border-top: 1px solid var(--line-2); }
+  .row:last-of-type { border-bottom: 1px solid var(--line-2); }
+  .row-label {
+    font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: 14px;
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .row.after .row-label { color: var(--accent); }
+  .row-label .cnt { font-size: 10px; letter-spacing: 0.18em; color: var(--ink-faint); }
+  .row.after .row-label .cnt { color: var(--accent); opacity: 0.7; }
+
+  .row-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    display: inline-flex; align-items: center;
+    padding: 9px 18px; border-radius: 999px;
+    border: 1px solid var(--ink-ghost); background: transparent;
+    color: var(--ink-faint);
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 18px; letter-spacing: -0.005em;
+  }
+  .row.after .chip {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.04);
+  }
+  body[data-theme="glass"] .chip {
+    border-color: var(--ink-ghost);
+  }
+  body[data-theme="glass"] .row.after .chip {
+    border-color: rgba(198, 106, 60, 0.5);
+    background: rgba(198, 106, 60, 0.08);
+  }
+
+  .chip-subs {
+    margin-top: 6px; padding-left: 8px;
+    font-size: 11px; color: var(--ink-faint);
+    line-height: 1.5;
+  }
+
+  .row-connector {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px; height: 28px; border-radius: 999px;
+    background: var(--bg); border: 1px solid var(--line-2);
+    display: grid; place-items: center; color: var(--ink-dim); z-index: 2;
+  }
+  body[data-theme="glass"] .row-connector {
+    background: rgba(255, 252, 246, 0.8);
+    border-color: rgba(42, 35, 29, 0.12);
+  }
+
+  .modal-actions {
+    margin-top: 26px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .btn-secondary {
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink-dim); padding: 12px 4px;
+    background: none; border: none; cursor: pointer; transition: color .2s;
+  }
+  .btn-secondary:hover { color: var(--ink); }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 14px;
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink); padding: 14px 22px;
+    border: 1px solid var(--accent);
+    background: rgba(var(--accent-rgb), 0.08);
+    border-radius: 999px; cursor: pointer;
+    transition: background .2s, box-shadow .25s, transform .15s;
+  }
+  .btn-primary:hover {
+    background: rgba(var(--accent-rgb), 0.16);
+    box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.25);
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary .arrow { color: var(--accent); }
+  body[data-theme="glass"] .btn-primary {
+    backdrop-filter: blur(8px);
+    border-color: rgba(198, 106, 60, 0.55);
+    box-shadow: 0 1px 2px rgba(42, 35, 29, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  /* ═══ Responsive ═══ */
+  @media (max-height: 720px) {
+    .hero-title { font-size: clamp(40px, 5.6vw, 80px); margin-top: 12px; }
+    .hero { padding: 28px 40px 24px; gap: 14px; }
+    .form { padding: 26px 44px 24px; }
+    .cat-card .name { font-size: 18px; }
+    .cat-card .preview { font-size: 10.5px; }
+    .email-input { font-size: 19px; padding-bottom: 8px; }
+    .hero-mark { width: 100px; height: 100px; }
+  }
+  @media (max-width: 1100px) {
+    .hero { padding: 32px 32px 24px; }
+    .form { padding: 28px 32px 24px; }
+    .hero-title { font-size: clamp(40px, 6.4vw, 76px); }
+    .cat-card .name { font-size: 18px; }
+    .cat-card .preview { font-size: 10.5px; }
+    .hero-mark { width: 116px; height: 116px; }
+  }
+  @media (max-width: 820px) {
+    body, html { overflow: auto; height: auto; }
+    .page { grid-template-columns: 1fr; height: auto; }
+    .hero { border-right: none; border-bottom: 1px solid var(--line-2); padding: 40px 28px; overflow: visible; }
+    .form { padding: 40px 28px; overflow: visible; }
+    .masthead { padding: 14px 28px; grid-template-columns: 1fr auto 1fr; gap: 14px; }
+    .masthead .meta { font-size: 9px; gap: 8px; }
+    .hero-mark { width: 96px; height: 96px; margin: 0 0 8px; }
+    .modal-head, .modal-body, .modal-foot { padding-left: 26px; padding-right: 26px; }
+    .modal-title { font-size: 30px; }
+    .chip { font-size: 16px; padding: 7px 14px; }
+  }
+  @media (max-width: 640px) {
+    .masthead { grid-template-columns: auto 1fr; gap: 0; }
+    .masthead .left { display: none; }
+    .masthead .right .meta { display: none; }
+    .hero-title { font-size: clamp(40px, 11vw, 64px); }
+    .action-bar { flex-direction: column; align-items: stretch; }
+    .subscribe { justify-content: center; }
+  }
+</style>
+</head>
+<body data-theme="glass">
+
+  <form method="POST" action="/register" id="digestForm">
+    <!-- Masthead -->
+    <header class="masthead">
+      <div class="left">
+        <div class="meta caps mono">
+          <span>EST. 2026</span>
+        </div>
+      </div>
+      <div class="brand">Brief<span class="dot">.</span></div>
+      <div class="right">
+        <div class="meta caps mono">
+          <span id="dateDisplay"></span>
+          <span class="sep"></span>
+          <span>SUNRISE 5:42</span>
+        </div>
+        <button type="button" class="toggle" id="themeToggle" aria-label="Toggle theme"><div class="knob"></div></button>
+      </div>
+    </header>
+
+    <!-- Page -->
+    <main class="page">
+      <!-- Left: Hero -->
+      <section class="hero">
+        <div>
+          <div class="hero-mark" aria-hidden="true">
+            <svg viewBox="0 0 96 96" fill="none">
+              <circle cx="48" cy="48" r="46" stroke="currentColor" stroke-width="1" class="m-frame"/>
+              <line x1="18" y1="50" x2="78" y2="50" stroke="currentColor" stroke-width="0.8" class="m-horizon"/>
+              <path d="M 27 50 A 21 21 0 0 1 69 50 Z" fill="var(--accent)" class="m-sun"/>
+              <rect x="24" y="61" width="2" height="7"  rx="1" fill="currentColor"/>
+              <rect x="31" y="58" width="2" height="13" rx="1" fill="currentColor"/>
+              <rect x="38" y="62" width="2" height="5"  rx="1" fill="currentColor"/>
+              <rect x="45" y="55" width="2" height="19" rx="1" fill="currentColor"/>
+              <rect x="52" y="59" width="2" height="11" rx="1" fill="currentColor"/>
+              <rect x="59" y="57" width="2" height="15" rx="1" fill="currentColor"/>
+              <rect x="66" y="61" width="2" height="7"  rx="1" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="hero-eyebrow caps">Subscribe &middot; No charge</div>
+          <h1 class="hero-title">Your morning briefing, <em>delivered daily.</em></h1>
+          <p class="hero-sub">
+            Pick the fields that matter to you. Each morning we compile what happened and what's ahead &mdash; read by a real voice, sent before breakfast.
+          </p>
+        </div>
+
+      </section>
+
+      <!-- Right: Form -->
+      <section class="form">
+        <div class="form-scroll">
+          {% if error %}
+          <p class="error">{{ error }}</p>
+          {% endif %}
+
+          <div>
+            <div class="step-label">
+              <span class="n">01</span>
+              <span class="t">Where to send it</span>
+            </div>
+            <div class="email-wrap">
+              <input class="email-input" type="email" name="email" id="email"
+                     placeholder="name@example.com" autocomplete="email"
+                     value="{{ email }}" />
+              <span class="underline-glow"></span>
+            </div>
+          </div>
+
+          <div>
+            <div class="step-label">
+              <span class="n">02</span>
+              <span class="t">Compose your fields</span>
+              <span class="hint">Tap to add</span>
+            </div>
+            <div class="cats" id="cats"></div>
+          </div>
+        </div>
+
+        <div class="action-bar">
+          <div class="counter">
+            <span class="num" id="count">0</span>
+            <span class="label caps">of 5 fields selected</span>
+          </div>
+          <button type="submit" class="subscribe" id="subscribe" disabled>
+            <span>Subscribe</span>
+            <svg class="arrow" width="22" height="10" viewBox="0 0 22 10" fill="none">
+              <path d="M0.5 5h20M16 1l4 4-4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <div id="hiddenFields" style="display:none;"></div>
+  </form>
+
+  {% if show_modal %}
+  <div class="modal-veil" id="modalVeil">
+    <div class="modal" role="dialog" aria-modal="true">
+      <button type="button" class="modal-close" id="modalClose" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <div class="modal-head">
+        <div class="eyebrow">Welcome back</div>
+        <h2 class="modal-title">You're <em>already in</em>.</h2>
+        <p class="modal-sub">
+          <span class="email-pill">{{ email }}</span> is already subscribed. Confirm the change to your fields below.
+        </p>
+      </div>
+
+      <div class="modal-body">
+        <div class="rows">
+          <div class="row before">
+            <div class="row-label">
+              <span>Previously</span>
+              <span class="cnt">{{ prev_categories|length }} field{{ 's' if prev_categories|length != 1 }}</span>
+            </div>
+            {% if prev_cats_detail %}
+            {% for cat in prev_cats_detail %}
+            <div style="margin-bottom: 10px;">
+              <div class="row-chips">
+                <span class="chip">{{ cat.name }}</span>
+              </div>
+              {% if cat.subs %}
+              <div class="chip-subs">{{ cat.subs | join(' &middot; ') }}</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="row-chips">
+              {% for cat in prev_categories %}
+              <span class="chip">{{ cat }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="row-connector" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M5 1.5v7M2 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <div class="row after">
+            <div class="row-label">
+              <span>New selection</span>
+              <span class="cnt">{{ new_categories|length }} field{{ 's' if new_categories|length != 1 }}</span>
+            </div>
+            {% if new_cats_detail %}
+            {% for cat in new_cats_detail %}
+            <div style="margin-bottom: 10px;">
+              <div class="row-chips">
+                <span class="chip">{{ cat.name }}</span>
+              </div>
+              {% if cat.subs %}
+              <div class="chip-subs">{{ cat.subs | join(' &middot; ') }}</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="row-chips">
+              {% for cat in new_categories %}
+              <span class="chip">{{ cat }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="keepBtn">Keep existing</button>
+          <form method="POST" action="/register/update" style="margin:0">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <input type="hidden" name="email" value="{{ email }}">
+            {% for cat in selected %}
+            <input type="hidden" name="categories" value="{{ cat }}">
+            {% endfor %}
+            {% if sub_selections %}
+            {% for cat, subs in sub_selections.items() %}
+            <input type="hidden" name="subs_{{ cat }}" value="{{ subs }}">
+            {% endfor %}
+            {% endif %}
+            <button type="submit" class="btn-primary">
+              <span>Update preferences</span>
+              <span class="arrow">&rarr;</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+<script>
+(function () {
+  // ───── Theme toggle ─────
+  var savedTheme = localStorage.getItem('brief-theme') || 'glass';
+  document.body.dataset.theme = savedTheme;
+
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var next = document.body.dataset.theme === 'glass' ? 'dark' : 'glass';
+    document.body.dataset.theme = next;
+    localStorage.setItem('brief-theme', next);
+  });
+
+  // ───── Date display ─────
+  var d = new Date();
+  var days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  document.getElementById('dateDisplay').textContent =
+    days[d.getDay()] + ' · ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+
+  // ───── Category data from server ─────
+  var serverCats = {{ categories | tojson }};
+  var serverSubs = {{ subcategories | tojson }};
+  var displayNames = {{ display_names | tojson }};
+  var preSelected = new Set({{ selected | tojson }});
+
+  var EXTRAS = {
+    tech_ai:          { html: 'Tech & <em>AI</em>',   preview: "Today: Apple’s WWDC keynote, OpenAI rolls out enterprise tier" },
+    business_markets: { html: 'Business & Markets',    preview: "Today: Fed holds rates, Treasury yields rise across the curve" },
+    sports:           { html: 'Sports',                preview: "Today: Knicks force Game 7, Real Madrid clinch La Liga" },
+    world_news:       { html: 'World News',            preview: "Today: G7 summit opens in Toronto, ceasefire talks resume" },
+    science:          { html: 'Science',               preview: "Today: JWST spots water vapor on K2-18b, new CRISPR trial" },
+  };
+
+  var CATS = serverCats.map(function (id, i) {
+    return {
+      id: id,
+      num: String(i + 1).padStart(2, '0'),
+      name: (EXTRAS[id] && EXTRAS[id].html) || displayNames[id] || id,
+      preview: (EXTRAS[id] && EXTRAS[id].preview) || '',
+      subs: serverSubs[id] || [],
+    };
+  });
+
+  // ───── State ─────
+  var catsEl = document.getElementById('cats');
+  var countEl = document.getElementById('count');
+  var subscribeBtn = document.getElementById('subscribe');
+  var emailInput = document.getElementById('email');
+
+  var selected = new Set();
+  var subState = {};
+  CATS.forEach(function (c) {
+    subState[c.id] = new Set(c.subs.map(function (s) { return s.id; }));
+  });
+
+  preSelected.forEach(function (id) { selected.add(id); });
+
+  var CHECK_SVG = '<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.4 2.4L9 3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  // ───── Render ─────
+  function renderCards() {
+    catsEl.innerHTML = CATS.map(function (c) {
+      var isChecked = selected.has(c.id);
+      var onCount = subState[c.id].size;
+      var chips = c.subs.map(function (s) {
+        var on = subState[c.id].has(s.id);
+        return '<button type="button" class="sub-chip' + (on ? '' : ' off') +
+          '" data-cat="' + c.id + '" data-sub="' + s.id + '"><span class="label">' +
+          s.name + '</span></button>';
+      }).join('');
+      return '<div class="cat-card' + (isChecked ? ' checked' : '') +
+        '" data-id="' + c.id + '" tabindex="0" role="button" aria-pressed="' + isChecked + '">' +
+        '<div class="cat-main">' +
+          '<span class="num">' + c.num + '</span>' +
+          '<span class="body">' +
+            '<span class="name">' + c.name + '</span>' +
+          '</span>' +
+          '<span class="check">' + CHECK_SVG + '</span>' +
+        '</div>' +
+        '<div class="cat-subs">' +
+          '<div class="subs-head caps mono">' +
+            '<span><span class="sub-count">' + onCount + '</span>/' + c.subs.length + '</span>' +
+          '</div>' +
+          '<div class="sub-chips">' + chips + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function updateCounter() {
+    countEl.textContent = selected.size;
+    var emailOk = /.+@.+\..+/.test(emailInput.value.trim());
+    subscribeBtn.disabled = !(selected.size > 0 && emailOk);
+  }
+
+  function toggleCategory(id) {
+    var c = CATS.find(function (x) { return x.id === id; });
+    if (selected.has(id)) {
+      selected.delete(id);
+    } else {
+      selected.add(id);
+      if (subState[id].size === 0) {
+        subState[id] = new Set(c.subs.map(function (s) { return s.id; }));
+      }
+    }
+    renderCards();
+    updateCounter();
+  }
+
+  function toggleSub(catId, subId) {
+    var set = subState[catId];
+    if (set.has(subId)) set.delete(subId); else set.add(subId);
+    if (set.size === 0) selected.delete(catId);
+    else if (!selected.has(catId)) selected.add(catId);
+    renderCards();
+    updateCounter();
+  }
+
+  function includeAll(catId) {
+    var c = CATS.find(function (x) { return x.id === catId; });
+    if (subState[catId].size === c.subs.length) return;
+    subState[catId] = new Set(c.subs.map(function (s) { return s.id; }));
+    if (!selected.has(catId)) selected.add(catId);
+    renderCards();
+    updateCounter();
+  }
+
+  // ───── Events ─────
+  catsEl.addEventListener('click', function (e) {
+    var chip = e.target.closest('.sub-chip');
+    if (chip) { toggleSub(chip.dataset.cat, chip.dataset.sub); return; }
+    var all = e.target.closest('[data-action="all"]');
+    if (all) { includeAll(all.dataset.cat); return; }
+    var card = e.target.closest('.cat-card');
+    if (card) toggleCategory(card.dataset.id);
+  });
+
+  catsEl.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var card = e.target.closest('.cat-card');
+    if (card && e.target === card) { e.preventDefault(); toggleCategory(card.dataset.id); }
+  });
+
+  emailInput.addEventListener('input', updateCounter);
+
+  // ───── Form submission ─────
+  document.getElementById('digestForm').addEventListener('submit', function (e) {
+    if (subscribeBtn.disabled) { e.preventDefault(); return; }
+    var hf = document.getElementById('hiddenFields');
+    hf.innerHTML = '';
+    selected.forEach(function (catId) {
+      var inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'categories'; inp.value = catId;
+      hf.appendChild(inp);
+
+      var subs = Array.from(subState[catId]).join(',');
+      if (subs) {
+        var sinp = document.createElement('input');
+        sinp.type = 'hidden'; sinp.name = 'subs_' + catId; sinp.value = subs;
+        hf.appendChild(sinp);
+      }
+    });
+  });
+
+  renderCards();
+  updateCounter();
+
+  // ───── Modal ─────
+  var veil = document.getElementById('modalVeil');
+  if (veil) {
+    document.body.classList.add('modal-open');
+    function closeModal() { veil.remove(); document.body.classList.remove('modal-open'); }
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('keepBtn').addEventListener('click', closeModal);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && veil.parentNode) closeModal(); });
+  }
+})();
+</script>
+
+</body>
+</html>
