@@ -1,0 +1,7 @@
+Good morning. In world news, a magnitude seven point two earthquake struck the coast of central Chile early this morning, causing widespread damage in the port city of Valparaiso. At least fourteen people have been confirmed dead and over two hundred are injured. The Chilean government declared a state of emergency and deployed military units for search and rescue operations. A tsunami warning was briefly issued for the Pacific coast but was later lifted.
+
+In tech, Anthropic announced Claude 4 with a one million token context window and native computer use capabilities. The model outperformed GPT-5 on several reasoning benchmarks. Pricing is twenty dollars per million input tokens and sixty dollars per million output tokens.
+
+In business, Toyota reported a thirty percent drop in quarterly profit, its steepest decline in five years. The company blamed a strong yen and slower-than-expected EV sales in China, where BYD and other local brands continue to gain market share.
+
+In sports, the Tour de France route for this year was announced, featuring five mountain stages in the Alps and a summit finish on Mont Ventoux. Two-time defending champion Jonas Vingegaard said the course favors climbers.

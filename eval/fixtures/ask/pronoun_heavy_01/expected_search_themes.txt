@@ -1,0 +1,1 @@
+Must resolve "he" to Jensen Huang and "it" to the Blackwell Ultra chip. Search query should reference Jensen Huang or Nvidia Blackwell announcement timing, not Zelensky/Macron or MIT. Tests pronoun disambiguation using conversation context.

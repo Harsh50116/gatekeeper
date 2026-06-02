@@ -1,0 +1,5 @@
+Good morning. In markets, Stripe filed its S-1 yesterday, finally setting the stage for what could be the largest tech IPO since Arm's listing last year. The company reported twenty-two billion dollars in revenue for the trailing twelve months, with a net profit margin of fourteen percent. The expected valuation range is between eighty and one hundred billion dollars. Early investors including Sequoia and Andreessen Horowitz stand to make significant returns.
+
+In tech, GitHub announced Copilot Workspace, a new AI-powered development environment that goes beyond code completion to handle entire project planning and implementation. The tool is priced at forty dollars per month for individual developers. Stack Overflow reported a forty percent decline in traffic over the past year, which many attribute to the rise of AI coding assistants.
+
+In sports, the FIFA Club World Cup draw was completed, placing Real Madrid and Flamengo in the same group. The tournament begins June fifteenth in the United States, with thirty-two clubs competing across twelve venues.

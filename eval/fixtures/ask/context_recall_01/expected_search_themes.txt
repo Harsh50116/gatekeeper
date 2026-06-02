@@ -1,0 +1,1 @@
+The answer is already in the conversation history — "Lewandowski scored twice." The model should resolve "he" to Lewandowski from prior turns and answer directly without searching. Tests whether the digest-first check uses conversation context, not just the digest.

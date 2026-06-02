@@ -1,0 +1,5 @@
+Good morning. Let's start with tech. OpenAI announced a new model yesterday called GPT-5 Turbo, claiming a thirty percent improvement in reasoning benchmarks over its predecessor. The model is available starting today through their API at fifty dollars per million tokens. Meanwhile, Google DeepMind published a paper showing their Gemini system can now solve sixty-two percent of competition-level math problems, up from forty-one percent last quarter.
+
+In sports, the NBA playoffs continued with the Boston Celtics defeating the Miami Heat one hundred and twelve to ninety-eight in game five, taking the series three games to two. Jaylen Brown led the scoring with thirty-four points. Over in the Premier League, Arsenal secured a two-one victory over Manchester City, moving to the top of the table with seventy-eight points.
+
+On the science front, NASA's Artemis three mission has been delayed again, now targeting a March twenty twenty-seven launch window. The delay is attributed to issues with the new life support systems in the lunar lander. In related news, SpaceX successfully landed its Starship booster for the third consecutive time during yesterday's test flight.
