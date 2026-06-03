@@ -87,6 +87,27 @@
   }
   .sb-foot .foot-env { margin-top: 6px; color: var(--ink-ghost); }
 
+  /* ── Sidebar collapse toggle ── */
+  .sb-toggle {
+    width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center;
+    color: var(--ink-faint); transition: background .15s, color .15s; flex-shrink: 0;
+  }
+  .sb-toggle:hover { background: var(--panel-2); color: var(--ink); }
+  .sb-toggle svg { transition: transform .2s; }
+  .app.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
+
+  .app.sb-collapsed { grid-template-columns: 64px 1fr; }
+  .app.sb-collapsed .sb-brand .logo,
+  .app.sb-collapsed .sb-brand .tag { display: none; }
+  .app.sb-collapsed .sb-brand { justify-content: center; padding: 18px 0 16px; }
+  .app.sb-collapsed .sb-section { display: none; }
+  .app.sb-collapsed .sb-link span:not(.sb-ico),
+  .app.sb-collapsed .sb-link .soon { display: none; }
+  .app.sb-collapsed .sb-link { justify-content: center; padding: 9px; }
+  .app.sb-collapsed .sb-link.active::before { display: none; }
+  .app.sb-collapsed .sb-nav { padding: 0 6px; }
+  .app.sb-collapsed .sb-foot { display: none; }
+
   /* ── Main ── */
   .main { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 
@@ -127,6 +148,14 @@
     flex: 0 0 auto; border-bottom: 1px solid var(--line-2);
     padding: 11px 28px 12px; display: flex; flex-direction: column; gap: 9px;
   }
+  .ctx-toggle {
+    width: 22px; height: 22px; border-radius: 5px; display: grid; place-items: center;
+    color: var(--ink-faint); transition: background .15s, color .15s, transform .2s;
+    flex-shrink: 0;
+  }
+  .ctx-toggle:hover { background: var(--panel-2); color: var(--ink); }
+  .context-bar.collapsed .ctx-prefs { display: none; }
+  .context-bar.collapsed .ctx-toggle { transform: rotate(-90deg); }
   .ctx-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .ctx-head .email { font-size: 14px; font-weight: 600; }
   .ctx-head .divider { width: 1px; height: 11px; background: var(--line-2); }
@@ -270,11 +299,20 @@
     <div class="sb-brand">
       <span class="logo">Brief<span class="dot">.</span></span>
       <span class="tag">ADMIN</span>
+      <button class="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
     <div class="sb-section">Evaluation</div>
     <nav class="sb-nav">
-      <a class="sb-link active" href="{{ url_for('admin.digest_eval', pw=pw) }}">Digest Eval</a>
-      <a class="sb-link" href="{{ url_for('admin.qa_eval', pw=pw) }}">QA Eval <span class="soon">SOON</span></a>
+      <a class="sb-link active" href="{{ url_for('admin.digest_eval', pw=pw) }}">
+        <span class="sb-ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h6M5 8.5h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+        <span>Digest Eval</span>
+      </a>
+      <a class="sb-link" href="{{ url_for('admin.qa_eval', pw=pw) }}">
+        <span class="sb-ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M6.5 6.5a1.5 1.5 0 0 1 2.8.8c0 1-1.3 1.2-1.3 2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".6" fill="currentColor"/></svg></span>
+        <span>QA Eval</span> <span class="soon">SOON</span>
+      </a>
     </nav>
     <div class="sb-foot">
       <div class="dotline"><span class="live"></span> <span>local · connected</span></div>
@@ -292,10 +330,10 @@
         <div class="sel-field">
           <label>Database</label>
           <div class="sel">
-            <select disabled>
-              <option selected>Local</option>
-              <option disabled>Staging</option>
-              <option disabled>Production</option>
+            <select id="envSelect">
+              <option value="local" selected>Local</option>
+              <option value="staging" disabled>Staging</option>
+              <option value="production" disabled>Production</option>
             </select>
             <svg class="chev" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 4l3.5 3.5L9 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
@@ -332,8 +370,11 @@
     </div>
 
     {% if selected_user %}
-    <div class="context-bar">
+    <div class="context-bar collapsed" id="contextBar">
       <div class="ctx-head">
+        <button class="ctx-toggle" onclick="toggleContext()" title="Toggle details">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <span class="email">{{ selected_user.email }}</span>
         <span class="divider"></span>
         <span class="k">Date</span> <span class="v">{{ selected_date }}</span>
@@ -442,6 +483,19 @@
 </div>
 
 <script>
+function toggleSidebar() {
+  var app = document.querySelector('.app');
+  app.classList.toggle('sb-collapsed');
+  localStorage.setItem('sb-collapsed', app.classList.contains('sb-collapsed') ? '1' : '0');
+}
+if (localStorage.getItem('sb-collapsed') === '1') {
+  document.querySelector('.app').classList.add('sb-collapsed');
+}
+
+function toggleContext() {
+  document.getElementById('contextBar').classList.toggle('collapsed');
+}
+
 function navigate() {
   var userId = document.getElementById('userSelect').value;
   var date = document.getElementById('dateSelect').value;
