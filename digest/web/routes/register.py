@@ -8,7 +8,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 
 from ...briefing.sources import CATEGORIES, SUBCATEGORIES
 from ...briefing.summarizer import build_user_digest
-from ...db.store import register_user, get_user_subcategories, save_digest, get_user_by_email, update_user_categories, save_user_subcategories, has_recent_items
+from ...db.store import register_user, get_user_subcategories, save_digest, save_digest_run_inputs, get_user_by_email, update_user_categories, save_user_subcategories, has_recent_items, get_rss_items_by_subcategory, get_reddit_items_by_category
 from ...services.tts import generate_audio
 from ...services.storage import upload_audio
 from ...services.mailer import send_digest_email
@@ -179,6 +179,22 @@ def _send_welcome_digest(user_id: str, email: str):
         if not user_subs:
             print(f"[DIGEST] No subcategory preferences for {email}, skipping")
             return
+
+        from datetime import timedelta
+        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        snapshot_rss = []
+        snapshot_reddit = []
+        for cat, subs in user_subs.items():
+            for sub in subs:
+                for r in get_rss_items_by_subcategory(cat, sub):
+                    r["category"] = cat
+                    r["subcategory"] = sub
+                    snapshot_rss.append(r)
+                for r in get_reddit_items_by_category(cat, [sub], cutoff):
+                    r["source"] = f"r/{r['subreddit']}"
+                    snapshot_reddit.append(r)
+        save_digest_run_inputs(user_id, date_str, snapshot_rss, snapshot_reddit)
 
         print(f"[DIGEST] Building digest for {len(user_subs)} categories...")
         digest_text = build_user_digest(user_subs)
