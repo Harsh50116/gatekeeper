@@ -8,12 +8,14 @@ from flask import Flask
 from .routes.register import bp as register_bp
 from .routes.player import bp as player_bp
 from .routes.ask import bp as ask_bp
+from .routes.admin import bp as admin_bp
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "templates"))
 
 app.register_blueprint(register_bp)
 app.register_blueprint(player_bp)
 app.register_blueprint(ask_bp)
+app.register_blueprint(admin_bp)
 
 if __name__ == "__main__":
     import sys

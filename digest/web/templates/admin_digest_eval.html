@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brief — Digest Eval</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0c0e;
+    --panel: #121419;
+    --panel-2: #171a20;
+    --panel-3: #1c2027;
+    --ink: #e7e9ed;
+    --ink-dim: #9aa1ab;
+    --ink-faint: #646b75;
+    --ink-ghost: #3c424b;
+    --accent: #d4895c;
+    --accent-rgb: 212, 137, 92;
+    --rss: #d4895c;
+    --reddit: #7e98c4;
+    --line: rgba(231, 233, 237, 0.07);
+    --line-2: rgba(231, 233, 237, 0.13);
+    --line-3: rgba(231, 233, 237, 0.22);
+    --ok: #6fae7e;
+    --sidebar-w: 232px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: "Inter", system-ui, sans-serif; height: 100vh; overflow: hidden;
+    -webkit-font-smoothing: antialiased; font-size: 14px;
+  }
+  button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
+  a { color: inherit; }
+
+  .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; height: 100vh; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    border-right: 1px solid var(--line-2); background: var(--panel);
+    display: flex; flex-direction: column;
+  }
+  .sb-brand {
+    padding: 18px 20px 16px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sb-brand .logo { font-family: "Instrument Serif", Georgia, serif; font-size: 22px; }
+  .sb-brand .logo .dot { color: var(--accent); }
+  .sb-brand .tag {
+    margin-left: auto; color: var(--ink-faint); border: 1px solid var(--line-2);
+    border-radius: 4px; padding: 3px 7px;
+    font-family: "JetBrains Mono", monospace; font-size: 9px; letter-spacing: 0.14em;
+  }
+  .sb-section {
+    padding: 18px 14px 6px; color: var(--ink-faint);
+    font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase;
+  }
+  .sb-nav { padding: 0 10px; display: flex; flex-direction: column; gap: 2px; }
+  .sb-link {
+    display: flex; align-items: center; gap: 11px; padding: 9px 12px;
+    border-radius: 6px; color: var(--ink-dim); font-size: 13px;
+    text-decoration: none; position: relative; transition: background .15s, color .15s;
+  }
+  .sb-link:hover { background: var(--panel-2); color: var(--ink); }
+  .sb-link.active { background: var(--panel-2); color: var(--ink); }
+  .sb-link.active::before {
+    content: ""; position: absolute; left: 0; top: 8px; bottom: 8px;
+    width: 2px; border-radius: 2px; background: var(--accent);
+  }
+  .sb-link .soon {
+    margin-left: auto; font-size: 8.5px; letter-spacing: 0.12em;
+    color: var(--ink-faint); border: 1px solid var(--line-2);
+    border-radius: 999px; padding: 2px 7px;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .sb-foot {
+    margin-top: auto; padding: 14px 20px; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: 10px; line-height: 1.6;
+  }
+  .sb-foot .dotline { display: flex; align-items: center; gap: 7px; }
+  .sb-foot .live {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--ok); box-shadow: 0 0 6px var(--ok); flex: 0 0 auto;
+  }
+  .sb-foot .foot-env { margin-top: 6px; color: var(--ink-ghost); }
+
+  /* ── Main ── */
+  .main { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+
+  .topbar {
+    flex: 0 0 auto; border-bottom: 1px solid var(--line-2);
+    background: var(--panel); padding: 14px 28px;
+    display: flex; align-items: center; gap: 22px;
+  }
+  .topbar h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .topbar .crumbs {
+    color: var(--ink-faint); font-size: 10px; letter-spacing: 0.12em;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .selector-wrap { margin-left: auto; display: flex; align-items: flex-end; gap: 12px; }
+  .sel-field { display: flex; flex-direction: column; gap: 6px; }
+  .sel-field label {
+    color: var(--ink-faint); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .sel {
+    position: relative; background: var(--panel-2);
+    border: 1px solid var(--line-2); border-radius: 7px;
+    display: flex; align-items: center;
+  }
+  .sel:hover { border-color: var(--line-3); }
+  .sel select {
+    appearance: none; -webkit-appearance: none;
+    background: transparent; border: none; outline: none; color: var(--ink);
+    font-family: "JetBrains Mono", monospace; font-size: 12px;
+    padding: 9px 36px 9px 13px; cursor: pointer; max-width: 360px;
+  }
+  .sel select option { background: #15181d; color: var(--ink); }
+  .sel select:disabled { color: var(--ink-faint); cursor: not-allowed; }
+  .sel .chev { position: absolute; right: 12px; pointer-events: none; color: var(--ink-faint); }
+
+  /* ── Context bar ── */
+  .context-bar {
+    flex: 0 0 auto; border-bottom: 1px solid var(--line-2);
+    padding: 11px 28px 12px; display: flex; flex-direction: column; gap: 9px;
+  }
+  .ctx-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .ctx-head .email { font-size: 14px; font-weight: 600; }
+  .ctx-head .divider { width: 1px; height: 11px; background: var(--line-2); }
+  .ctx-head .k {
+    color: var(--ink-faint); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .ctx-head .v { font-size: 12.5px; color: var(--ink-dim); }
+  .ctx-summary {
+    color: var(--ink-faint); font-size: 10.5px; letter-spacing: 0.04em;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .ctx-prefs { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
+  .ctx-prefs .pl {
+    color: var(--ink-faint); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .ctx-sep { width: 1px; height: 14px; background: var(--line-2); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line-2); border-radius: 5px;
+    padding: 3px 9px; font-size: 11.5px; line-height: 1.35; white-space: nowrap;
+  }
+  .chip.cat { border-color: rgba(var(--accent-rgb), 0.4); background: rgba(var(--accent-rgb), 0.08); }
+  .chip.sub { color: var(--ink-dim); }
+  .chip.sub .pcat {
+    color: var(--ink-faint); font-family: "JetBrains Mono", monospace; font-size: 9px;
+  }
+
+  /* ── Split: inputs | output ── */
+  .split { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr 0.92fr; }
+  .col-inputs { border-right: 1px solid var(--line-2); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+
+  .input-tabs {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 4px;
+    padding: 9px 18px 0; border-bottom: 1px solid var(--line-2);
+  }
+  .input-tabs .tab {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 9px 13px; border-radius: 7px 7px 0 0;
+    color: var(--ink-faint); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; font-weight: 600; cursor: pointer;
+    position: relative; transition: color .15s; background: none; border: none;
+  }
+  .input-tabs .tab:hover { color: var(--ink-dim); }
+  .input-tabs .tab.active { color: var(--ink); }
+  .input-tabs .tab.active::after {
+    content: ""; position: absolute; left: 5px; right: 5px; bottom: -1px; height: 2px;
+    background: var(--accent); border-radius: 2px;
+  }
+  .input-tabs .src-dot { width: 8px; height: 8px; border-radius: 2px; flex: 0 0 auto; }
+  .input-tabs .src-dot.rss { background: var(--rss); }
+  .input-tabs .src-dot.reddit { background: var(--reddit); }
+  .input-tabs .count {
+    font-family: "JetBrains Mono", monospace; font-size: 10px;
+    color: var(--ink-faint); border: 1px solid var(--line-2); border-radius: 999px; padding: 1px 7px;
+  }
+  .input-tabs .tab.active .count { color: var(--ink-dim); border-color: var(--line-3); }
+
+  .items-scroll {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 28px 24px;
+  }
+  .items-scroll::-webkit-scrollbar, .col-output::-webkit-scrollbar { width: 9px; }
+  .items-scroll::-webkit-scrollbar-thumb, .col-output::-webkit-scrollbar-thumb {
+    background: var(--line-2); border-radius: 5px; border: 2px solid var(--bg);
+  }
+
+  /* ── Input items ── */
+  .items { display: flex; flex-direction: column; }
+  .item {
+    display: grid; grid-template-columns: 14px 1fr auto;
+    gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); align-items: baseline;
+  }
+  .item:first-child { border-top: none; }
+  .item .bullet {
+    width: 5px; height: 5px; border-radius: 999px; background: var(--ink-faint);
+    justify-self: center; transform: translateY(7px); transition: background .15s;
+  }
+  .item:hover .bullet { background: var(--accent); }
+  .item .it-body { min-width: 0; }
+  .item .it-title {
+    font-size: 13.5px; line-height: 1.4; color: var(--ink);
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .item:hover .it-title { -webkit-line-clamp: unset; display: block; overflow: visible; }
+  .item .it-title a { text-decoration: none; color: inherit; transition: color .15s; }
+  .item .it-title a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .item .it-meta {
+    margin-top: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--ink-faint);
+  }
+  .item .it-meta > * { white-space: nowrap; }
+  .item .it-meta .sep { width: 2px; height: 2px; border-radius: 999px; background: var(--ink-ghost); }
+  .item .it-meta .src { color: var(--ink-dim); }
+  .item .cat-tag {
+    font-family: "JetBrains Mono", monospace; font-size: 9px; letter-spacing: 0.06em;
+    color: var(--ink-faint); text-transform: uppercase;
+    border: 1px solid var(--line-2); border-radius: 4px; padding: 3px 7px;
+    white-space: nowrap; align-self: flex-start;
+  }
+
+  /* ── Output column ── */
+  .col-output { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+  .digest-block { padding: 18px 30px 30px; }
+  .digest-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .digest-head h2 {
+    margin: 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
+  }
+  .digest-paper {
+    background: var(--panel); border: 1px solid var(--line-2);
+    border-radius: 10px; padding: 26px 28px 28px;
+  }
+  .digest-paper .dateline {
+    font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.14em;
+    color: var(--ink-faint); text-transform: uppercase; margin-bottom: 18px;
+  }
+  .digest-paper .digest-text {
+    font-size: 14.5px; line-height: 1.65; color: #d9dce1; white-space: pre-wrap;
+  }
+
+  .empty-state {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; color: var(--ink-faint); font-size: 13px;
+  }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 1080px) {
+    body, html { overflow: auto; height: auto; }
+    .app { height: auto; min-height: 100vh; }
+    .split { grid-template-columns: 1fr; }
+    .col-inputs { border-right: none; border-bottom: 1px solid var(--line-2); }
+    .items-scroll { max-height: 60vh; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <span class="logo">Brief<span class="dot">.</span></span>
+      <span class="tag">ADMIN</span>
+    </div>
+    <div class="sb-section">Evaluation</div>
+    <nav class="sb-nav">
+      <a class="sb-link active" href="{{ url_for('admin.digest_eval', pw=pw) }}">Digest Eval</a>
+      <a class="sb-link" href="{{ url_for('admin.qa_eval', pw=pw) }}">QA Eval <span class="soon">SOON</span></a>
+    </nav>
+    <div class="sb-foot">
+      <div class="dotline"><span class="live"></span> <span>local · connected</span></div>
+      <div class="foot-env">env: local · v0.1</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h1>Digest Eval</h1>
+        <span class="crumbs">ADMIN / DIGEST EVAL</span>
+      </div>
+      <div class="selector-wrap">
+        <div class="sel-field">
+          <label>Database</label>
+          <div class="sel">
+            <select disabled>
+              <option selected>Local</option>
+              <option disabled>Staging</option>
+              <option disabled>Production</option>
+            </select>
+            <svg class="chev" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 4l3.5 3.5L9 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="sel-field">
+          <label>User</label>
+          <div class="sel">
+            <select id="userSelect" onchange="navigate()">
+              {% for u in users %}
+              <option value="{{ u.id }}" {% if u.id == selected_user_id %}selected{% endif %}>{{ u.email }}</option>
+              {% endfor %}
+              {% if not users %}
+              <option value="">No data</option>
+              {% endif %}
+            </select>
+            <svg class="chev" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 4l3.5 3.5L9 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="sel-field">
+          <label>Date</label>
+          <div class="sel">
+            <select id="dateSelect" onchange="navigate()">
+              {% for d in dates %}
+              <option value="{{ d }}" {% if d == selected_date %}selected{% endif %}>{{ d }}</option>
+              {% endfor %}
+              {% if not dates %}
+              <option value="">No data</option>
+              {% endif %}
+            </select>
+            <svg class="chev" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 4l3.5 3.5L9 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if selected_user %}
+    <div class="context-bar">
+      <div class="ctx-head">
+        <span class="email">{{ selected_user.email }}</span>
+        <span class="divider"></span>
+        <span class="k">Date</span> <span class="v">{{ selected_date }}</span>
+        <span class="ctx-summary">{{ user_categories | length }} cats · {{ user_subcats.values() | map('length') | sum }} subs · {{ rss_items | length + reddit_items | length }} inputs</span>
+      </div>
+      {% if user_categories %}
+      <div class="ctx-prefs">
+        <span class="pl">Categories</span>
+        <div class="chips">
+          {% for cat in user_categories %}
+          <span class="chip cat">{{ cat }}</span>
+          {% endfor %}
+        </div>
+        {% if user_subcats %}
+        <span class="ctx-sep"></span>
+        <span class="pl">Subcategories</span>
+        <div class="chips">
+          {% for cat, subs in user_subcats.items() %}
+            {% for sub in subs %}
+            <span class="chip sub"><span class="pcat">{{ cat.split(' ')[0] | lower }}/</span>{{ sub }}</span>
+            {% endfor %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="split">
+      <div class="col-inputs">
+        <div class="input-tabs">
+          <button class="tab active" data-tab="rss" onclick="switchTab(this)">
+            <span class="src-dot rss"></span>RSS Inputs
+            <span class="count">{{ "%02d" | format(rss_items | length) }}</span>
+          </button>
+          <button class="tab" data-tab="reddit" onclick="switchTab(this)">
+            <span class="src-dot reddit"></span>Reddit Inputs
+            <span class="count">{{ "%02d" | format(reddit_items | length) }}</span>
+          </button>
+        </div>
+        <div class="items-scroll">
+          <div class="items" id="rssItems">
+            {% if rss_items %}
+              {% for item in rss_items %}
+              <div class="item">
+                <span class="bullet"></span>
+                <div class="it-body">
+                  <div class="it-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></div>
+                  <div class="it-meta">
+                    <span class="src">{{ item.source }}</span>
+                    <span class="sep"></span>
+                    <span>{{ item.published[:16] if item.published else '' }}</span>
+                  </div>
+                </div>
+                <span class="cat-tag">{{ display_names.get(item.category, item.category) }}</span>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-state">No RSS inputs recorded</div>
+            {% endif %}
+          </div>
+          <div class="items hidden" id="redditItems">
+            {% if reddit_items %}
+              {% for item in reddit_items %}
+              <div class="item">
+                <span class="bullet"></span>
+                <div class="it-body">
+                  <div class="it-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></div>
+                  <div class="it-meta">
+                    <span class="src">{{ item.source }}</span>
+                    <span class="sep"></span>
+                    <span>{{ item.published[:16] if item.published else '' }}</span>
+                  </div>
+                </div>
+                <span class="cat-tag">{{ display_names.get(item.category, item.category) }}</span>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-state">No Reddit inputs recorded</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-output">
+        <div class="digest-block">
+          <div class="digest-head">
+            <h2>Final Digest Output</h2>
+          </div>
+          {% if digest_text %}
+          <div class="digest-paper">
+            <div class="dateline">{{ selected_date }}</div>
+            <div class="digest-text">{{ digest_text }}</div>
+          </div>
+          {% else %}
+          <div class="empty-state">No digest recorded for this date</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="empty-state" style="flex: 1;">No digest data available. Run the pipeline or sign up a user first.</div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function navigate() {
+  var userId = document.getElementById('userSelect').value;
+  var date = document.getElementById('dateSelect').value;
+  var pw = '{{ pw }}';
+  window.location.href = '/admin/digest-eval?user_id=' + encodeURIComponent(userId) + '&date=' + encodeURIComponent(date) + '&pw=' + encodeURIComponent(pw);
+}
+
+function switchTab(el) {
+  var which = el.dataset.tab;
+  document.querySelectorAll('.input-tabs .tab').forEach(function(t) {
+    t.classList.toggle('active', t === el);
+  });
+  document.getElementById('rssItems').classList.toggle('hidden', which !== 'rss');
+  document.getElementById('redditItems').classList.toggle('hidden', which !== 'reddit');
+  document.querySelector('.items-scroll').scrollTop = 0;
+}
+</script>
+</body>
+</html>
