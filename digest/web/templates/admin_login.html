@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brief — Admin Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0c0e;
+    --panel: #121419;
+    --panel-2: #171a20;
+    --ink: #e7e9ed;
+    --ink-dim: #9aa1ab;
+    --ink-faint: #646b75;
+    --accent: #d4895c;
+    --accent-rgb: 212, 137, 92;
+    --line: rgba(231, 233, 237, 0.07);
+    --line-2: rgba(231, 233, 237, 0.13);
+    --err: #c45c5c;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: "Inter", system-ui, sans-serif; height: 100vh;
+    -webkit-font-smoothing: antialiased; font-size: 14px;
+    display: grid; place-items: center;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--line-2); border-radius: 14px;
+    padding: 40px 38px 36px; width: 360px; text-align: center;
+  }
+  .logo {
+    font-family: "Instrument Serif", Georgia, serif; font-size: 32px; margin-bottom: 6px;
+  }
+  .logo .dot { color: var(--accent); }
+  .subtitle {
+    color: var(--ink-faint); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    font-family: "JetBrains Mono", monospace; margin-bottom: 30px;
+  }
+  form { display: flex; flex-direction: column; gap: 14px; }
+  input[type="password"] {
+    background: var(--panel-2); border: 1px solid var(--line-2); border-radius: 8px;
+    padding: 12px 14px; color: var(--ink); font-family: "JetBrains Mono", monospace;
+    font-size: 13px; outline: none; transition: border-color .15s;
+  }
+  input[type="password"]:focus { border-color: rgba(var(--accent-rgb), 0.5); }
+  input[type="password"]::placeholder { color: var(--ink-faint); }
+  button {
+    background: var(--accent); color: #0b0c0e; border: none; border-radius: 8px;
+    padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: opacity .15s;
+  }
+  button:hover { opacity: 0.88; }
+  .error {
+    color: var(--err); font-size: 12px; margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Brief<span class="dot">.</span></div>
+  <div class="subtitle">Admin</div>
+  <form method="post">
+    <input type="password" name="password" placeholder="Password" autofocus required />
+    {% if error %}<span class="error">{{ error }}</span>{% endif %}
+    <button type="submit">Sign in</button>
+  </form>
+</div>
+</body>
+</html>

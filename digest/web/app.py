@@ -11,6 +11,7 @@ from .routes.ask import bp as ask_bp
 from .routes.admin import bp as admin_bp
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "templates"))
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-in-prod")
 
 app.register_blueprint(register_bp)
 app.register_blueprint(player_bp)

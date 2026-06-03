@@ -1,7 +1,7 @@
 import os
 from functools import wraps
 
-from flask import Blueprint, render_template, request, redirect, url_for, abort
+from flask import Blueprint, render_template, request, redirect, url_for, session
 
 from ...db.store import (
     get_admin_users, get_digest_dates, get_digest_run_inputs,
@@ -20,28 +20,44 @@ DISPLAY_NAMES = {
 }
 
 
-def _require_password(f):
+def _require_login(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        admin_pw = os.environ.get("ADMIN_PASSWORD", "")
-        if not admin_pw:
-            abort(403)
-        if request.args.get("pw") != admin_pw:
-            abort(403)
+        if not session.get("admin"):
+            return redirect(url_for("admin.login"))
         return f(*args, **kwargs)
     return decorated
 
 
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    if session.get("admin"):
+        return redirect(url_for("admin.digest_eval"))
+    error = None
+    if request.method == "POST":
+        admin_pw = os.environ.get("ADMIN_PASSWORD", "")
+        if admin_pw and request.form.get("password") == admin_pw:
+            session["admin"] = True
+            return redirect(url_for("admin.digest_eval"))
+        error = "Invalid password"
+    return render_template("admin_login.html", error=error)
+
+
+@bp.route("/logout")
+def logout():
+    session.pop("admin", None)
+    return redirect(url_for("admin.login"))
+
+
 @bp.route("/")
-@_require_password
+@_require_login
 def index():
-    return redirect(url_for("admin.digest_eval", pw=request.args.get("pw", "")))
+    return redirect(url_for("admin.digest_eval"))
 
 
 @bp.route("/digest-eval")
-@_require_password
+@_require_login
 def digest_eval():
-    pw = request.args.get("pw", "")
     users = get_admin_users()
 
     user_id = request.args.get("user_id", "")
@@ -89,11 +105,10 @@ def digest_eval():
         reddit_items=inputs["reddit"],
         digest_text=digest_text,
         display_names=DISPLAY_NAMES,
-        pw=pw,
     )
 
 
 @bp.route("/qa-eval")
-@_require_password
+@_require_login
 def qa_eval():
-    return render_template("admin_qa_eval.html", pw=request.args.get("pw", ""))
+    return render_template("admin_qa_eval.html")
