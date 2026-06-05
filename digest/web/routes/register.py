@@ -193,6 +193,7 @@ def _send_welcome_digest(user_id: str, email: str):
                     snapshot_rss.append(r)
                 for r in get_reddit_items_by_category(cat, [sub], cutoff):
                     r["source"] = f"r/{r['subreddit']}"
+                    r["summary"] = r.get("body", "")
                     snapshot_reddit.append(r)
         save_digest_run_inputs(user_id, date_str, snapshot_rss, snapshot_reddit)
 

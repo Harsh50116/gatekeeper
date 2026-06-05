@@ -79,11 +79,13 @@ def run_pipeline():
                         snapshot_rss.append(r)
                     for r in get_reddit_items_by_category(cat, [sub], cutoff):
                         r["source"] = f"r/{r['subreddit']}"
+                        r["summary"] = r.get("body", "")
                         snapshot_reddit.append(r)
             save_digest_run_inputs(user["id"], date_str, snapshot_rss, snapshot_reddit)
 
             previous = get_previous_digest(user["id"])
             digest_text = build_user_digest(user_subs, previous_digest=previous)
+
             if not digest_text:
                 logger.warning("  Empty digest for %s, skipping", email)
                 continue

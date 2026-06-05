@@ -406,17 +406,17 @@ def save_digest_run_inputs(user_id: str, digest_date: str, rss_items: list[dict]
     cur.execute("DELETE FROM digest_run_inputs WHERE user_id = %s AND digest_date = %s", (user_id, digest_date))
     for item in rss_items:
         cur.execute(
-            "INSERT INTO digest_run_inputs (user_id, digest_date, source_type, item_id, category, subcategory, title, url, source, published, created_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            "INSERT INTO digest_run_inputs (user_id, digest_date, source_type, item_id, category, subcategory, title, url, source, published, summary, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (user_id, digest_date, "rss", item.get("id"), item.get("category", ""), item.get("subcategory"),
-             item["title"], item["url"], item["source"], item.get("published"), now),
+             item["title"], item["url"], item["source"], item.get("published"), item.get("summary"), now),
         )
     for item in reddit_items:
         cur.execute(
-            "INSERT INTO digest_run_inputs (user_id, digest_date, source_type, item_id, category, subcategory, title, url, source, published, created_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            "INSERT INTO digest_run_inputs (user_id, digest_date, source_type, item_id, category, subcategory, title, url, source, published, summary, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (user_id, digest_date, "reddit", item.get("id"), item.get("category", ""), item.get("subcategory"),
-             item["title"], item["url"], item["source"], item.get("published"), now),
+             item["title"], item["url"], item["source"], item.get("published"), item.get("summary"), now),
         )
     conn.commit()
     conn.close()
@@ -426,7 +426,7 @@ def get_digest_run_inputs(user_id: str, digest_date: str) -> dict[str, list[dict
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(
-        "SELECT source_type, category, subcategory, title, url, source, published "
+        "SELECT source_type, category, subcategory, title, url, source, published, summary "
         "FROM digest_run_inputs WHERE user_id = %s AND digest_date = %s "
         "ORDER BY source_type, category, published DESC",
         (user_id, digest_date),
