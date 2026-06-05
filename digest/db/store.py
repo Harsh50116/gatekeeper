@@ -463,3 +463,35 @@ def get_digest_dates(user_id: str) -> list[str]:
     dates = [r[0] for r in cur.fetchall()]
     conn.close()
     return dates
+
+
+def save_pass1_summaries(user_id: str, digest_date: str, summaries: dict[str, str], item_counts: dict[str, int]) -> None:
+    conn = get_connection()
+    cur = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    cur.execute("DELETE FROM digest_run_pass1 WHERE user_id = %s AND digest_date = %s", (user_id, digest_date))
+    for key, summary in summaries.items():
+        if not summary:
+            continue
+        cat, sub = key.split("/", 1)
+        cur.execute(
+            "INSERT INTO digest_run_pass1 (user_id, digest_date, category, subcategory, summary, item_count, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (user_id, digest_date, cat, sub, summary, item_counts.get(key, 0), now),
+        )
+    conn.commit()
+    conn.close()
+
+
+def get_pass1_summaries(user_id: str, digest_date: str) -> list[dict]:
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT category, subcategory, summary, item_count "
+        "FROM digest_run_pass1 WHERE user_id = %s AND digest_date = %s "
+        "ORDER BY category, subcategory",
+        (user_id, digest_date),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
