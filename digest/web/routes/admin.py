@@ -67,6 +67,7 @@ def digest_eval():
     dates = []
     inputs = {"rss": [], "reddit": []}
     digest_text = ""
+    pass1_summaries = []
     selected_user = None
     user_categories = []
     user_subcats = {}
@@ -84,6 +85,7 @@ def digest_eval():
         if date:
             inputs = get_digest_run_inputs(user_id, date)
             digest_text = get_digest_by_date(user_id, date) or ""
+            pass1_summaries = get_pass1_summaries(user_id, date)
 
         sub_prefs = get_user_subcategories(user_id)
         for cat, subs in sub_prefs.items():
@@ -105,6 +107,7 @@ def digest_eval():
         rss_items=inputs["rss"],
         reddit_items=inputs["reddit"],
         digest_text=digest_text,
+        pass1_summaries=pass1_summaries,
         display_names=DISPLAY_NAMES,
     )
 
