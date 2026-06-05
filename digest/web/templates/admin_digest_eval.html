@@ -257,10 +257,10 @@
   .item .it-meta > * { white-space: nowrap; }
   .item .it-meta .src { color: var(--ink-dim); }
   .item .it-summary {
-    margin-top: 8px; padding: 8px 10px; background: var(--panel-2);
+    margin-top: 8px; padding: 10px 12px; background: var(--panel-2);
     border: 1px solid var(--line); border-radius: 6px;
-    font-size: 12px; line-height: 1.55; color: var(--ink-dim); white-space: pre-wrap;
-    display: none;
+    font-size: 13.5px; line-height: 1.65; color: var(--ink-dim); white-space: pre-wrap;
+    display: none; grid-column: 1 / -1;
   }
   .item.expanded .it-summary { display: block; }
   .item .cat-tag {
@@ -463,9 +463,9 @@
                   <div class="it-meta">
                     <span class="src">{{ item.source }}</span>
                   </div>
-                  {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
                 </div>
                 <span class="cat-tag">{{ display_names.get(item.category, item.category) }}{% if item.subcategory %}: {{ item.subcategory }}{% endif %}</span>
+                {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
               </div>
               {% endfor %}
             {% else %}
@@ -482,9 +482,9 @@
                   <div class="it-meta">
                     <span class="src">{{ item.source }}</span>
                   </div>
-                  {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
                 </div>
                 <span class="cat-tag">{{ display_names.get(item.category, item.category) }}{% if item.subcategory %}: {{ item.subcategory }}{% endif %}</span>
+                {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
               </div>
               {% endfor %}
             {% else %}

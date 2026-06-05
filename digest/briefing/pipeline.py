@@ -81,8 +81,6 @@ def run_pipeline():
                         r["source"] = f"r/{r['subreddit']}"
                         r["summary"] = r.get("body", "")
                         snapshot_reddit.append(r)
-            save_digest_run_inputs(user["id"], date_str, snapshot_rss, snapshot_reddit)
-
             previous = get_previous_digest(user["id"])
             digest_text = build_user_digest(user_subs, previous_digest=previous)
 
@@ -90,6 +88,7 @@ def run_pipeline():
                 logger.warning("  Empty digest for %s, skipping", email)
                 continue
 
+            save_digest_run_inputs(user["id"], date_str, snapshot_rss, snapshot_reddit)
             save_digest(user["id"], digest_text)
             audio_path = generate_audio(digest_text, email)
             audio_url = upload_audio(audio_path)

@@ -195,14 +195,13 @@ def _send_welcome_digest(user_id: str, email: str):
                     r["source"] = f"r/{r['subreddit']}"
                     r["summary"] = r.get("body", "")
                     snapshot_reddit.append(r)
-        save_digest_run_inputs(user_id, date_str, snapshot_rss, snapshot_reddit)
-
         print(f"[DIGEST] Building digest for {len(user_subs)} categories...")
         digest_text = build_user_digest(user_subs)
         if not digest_text:
             print(f"[DIGEST] Empty digest for {email}")
             return
 
+        save_digest_run_inputs(user_id, date_str, snapshot_rss, snapshot_reddit)
         print(f"[DIGEST] Saving digest to history...")
         save_digest(user_id, digest_text)
         print(f"[DIGEST] Generating audio...")
