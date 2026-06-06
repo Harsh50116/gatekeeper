@@ -21,6 +21,8 @@
     --accent-rgb: 212, 137, 92;
     --rss: #d4895c;
     --reddit: #7e98c4;
+    --p1: #c9a14a;
+    --p1-rgb: 201, 161, 74;
     --line: rgba(231, 233, 237, 0.07);
     --line-2: rgba(231, 233, 237, 0.13);
     --line-3: rgba(231, 233, 237, 0.22);
@@ -192,9 +194,11 @@
     color: var(--ink-faint); font-family: "JetBrains Mono", monospace; font-size: 9px;
   }
 
-  /* ── Split: inputs | output ── */
+  /* ── Split: two panes ── */
   .split { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr 0.92fr; }
-  .col-inputs { border-right: 1px solid var(--line-2); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .pane.is-left { border-right: 1px solid var(--line-2); }
+  .view-content { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 
   .input-tabs {
     flex: 0 0 auto; display: flex; align-items: center; gap: 4px;
@@ -225,8 +229,8 @@
   .items-scroll {
     flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 28px 24px;
   }
-  .items-scroll::-webkit-scrollbar, .col-output::-webkit-scrollbar { width: 9px; }
-  .items-scroll::-webkit-scrollbar-thumb, .col-output::-webkit-scrollbar-thumb {
+  .items-scroll::-webkit-scrollbar, .pane-scroll::-webkit-scrollbar { width: 9px; }
+  .items-scroll::-webkit-scrollbar-thumb, .pane-scroll::-webkit-scrollbar-thumb {
     background: var(--line-2); border-radius: 5px; border: 2px solid var(--bg);
   }
 
@@ -269,7 +273,7 @@
     border: 1px solid var(--line-2); border-radius: 4px; padding: 3px 7px;
     white-space: nowrap; align-self: flex-start;
   }
-  .item.cat-hidden { display: none !important; }
+  .item.cat-hidden, .p1-card.cat-hidden { display: none !important; }
 
   .cat-filters {
     flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
@@ -288,13 +292,82 @@
     background: rgba(var(--accent-rgb), 0.08);
   }
 
-  /* ── Output column ── */
-  .col-output { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
-  .digest-block { padding: 18px 30px 30px; }
-  .digest-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-  .digest-head h2 {
-    margin: 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
+  /* ── View toggle ── */
+  .view-toggle {
+    display: inline-flex; align-items: stretch;
+    background: var(--panel-2); border: 1px solid var(--line-2);
+    border-radius: 9px; padding: 3px; margin-bottom: 1px;
   }
+  .vt-btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 7px 14px 7px 10px; border-radius: 6px;
+    color: var(--ink-faint); font-size: 12.5px; font-weight: 500;
+    transition: color .15s, background .15s; white-space: nowrap;
+  }
+  .vt-btn .vt-n {
+    width: 18px; height: 18px; border-radius: 5px; flex: 0 0 auto;
+    display: grid; place-items: center;
+    font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--line-2); color: var(--ink-faint);
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .vt-btn .vt-stage {
+    font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-ghost);
+  }
+  .vt-btn:hover { color: var(--ink-dim); }
+  .vt-btn.active { background: var(--panel-3); color: var(--ink); }
+  .vt-btn.active .vt-n { background: var(--accent); border-color: var(--accent); color: #1a1206; }
+  .vt-btn .vt-lbl {
+    display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.25;
+  }
+
+  /* ── Pane headers ── */
+  .pane-head {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
+    padding: 14px 24px 13px; border-bottom: 1px solid var(--line-2);
+  }
+  .pane-head .stage {
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
+    color: var(--ink-dim); display: inline-flex; align-items: center; gap: 9px;
+  }
+  .pane-head .stage .sn {
+    width: 18px; height: 18px; border-radius: 5px; flex: 0 0 auto;
+    display: grid; place-items: center;
+    font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 600;
+    color: var(--ink-faint); border: 1px solid var(--line-2);
+  }
+  .pane-head .stage.p1 .sn {
+    color: var(--p1); border-color: rgba(var(--p1-rgb), 0.5); background: rgba(var(--p1-rgb), 0.1);
+  }
+  .pane-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+  /* ── Pass 1 cards ── */
+  .pass1-scroll { padding: 18px 22px 26px; }
+  .p1-list { display: flex; flex-direction: column; gap: 13px; }
+  .p1-card {
+    border: 1px solid var(--line-2); border-radius: 11px;
+    background: var(--panel); padding: 15px 17px 14px;
+  }
+  .p1-top { display: flex; align-items: center; gap: 12px; margin-bottom: 11px; }
+  .p1-key {
+    font-family: "JetBrains Mono", monospace; font-size: 13px;
+    color: var(--ink); font-weight: 500;
+  }
+  .p1-key .pcat { color: var(--p1); }
+  .p1-summary {
+    margin: 0 0 13px; font-size: 13.5px; line-height: 1.62;
+    color: #d0d4da; white-space: pre-wrap;
+  }
+  .p1-prov {
+    display: flex; align-items: center; gap: 9px;
+    font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--ink-faint);
+    padding-top: 11px; border-top: 1px solid var(--line);
+  }
+  .p1-prov .arrow { color: var(--ink-ghost); }
+  .p1-prov b { color: var(--ink-dim); font-weight: 500; }
+
+  /* ── Digest output ── */
+  .digest-block { padding: 18px 30px 30px; }
   .digest-paper {
     background: var(--panel); border: 1px solid var(--line-2);
     border-radius: 10px; padding: 26px 28px 28px;
@@ -318,7 +391,7 @@
     body, html { overflow: auto; height: auto; }
     .app { height: auto; min-height: 100vh; }
     .split { grid-template-columns: 1fr; }
-    .col-inputs { border-right: none; border-bottom: 1px solid var(--line-2); }
+    .pane.is-left { border-right: none; border-bottom: 1px solid var(--line-2); }
     .items-scroll { max-height: 60vh; }
   }
 </style>
@@ -358,6 +431,16 @@
         <span class="crumbs">ADMIN / DIGEST EVAL</span>
       </div>
       <div class="selector-wrap">
+        <div class="view-toggle" id="viewToggle">
+          <button class="vt-btn active" data-pass="pass1" onclick="switchView('pass1')">
+            <span class="vt-n">1</span>
+            <span class="vt-lbl"><span class="vt-stage">Inputs → Pass 1</span>Condense</span>
+          </button>
+          <button class="vt-btn" data-pass="pass2" onclick="switchView('pass2')">
+            <span class="vt-n">2</span>
+            <span class="vt-lbl"><span class="vt-stage">Pass 1 → Digest</span>Compose</span>
+          </button>
+        </div>
         <div class="sel-field">
           <label>Database</label>
           <div class="sel">
@@ -435,78 +518,142 @@
     </div>
 
     <div class="split">
-      <div class="col-inputs">
-        <div class="input-tabs">
-          <button class="tab active" data-tab="rss" onclick="switchTab(this)">
-            <span class="src-dot rss"></span>RSS Inputs
-            <span class="count">{{ "%02d" | format(rss_items | length) }}</span>
-          </button>
-          <button class="tab" data-tab="reddit" onclick="switchTab(this)">
-            <span class="src-dot reddit"></span>Reddit Inputs
-            <span class="count">{{ "%02d" | format(reddit_items | length) }}</span>
-          </button>
-        </div>
-        <div class="cat-filters">
-          <button class="cf active" onclick="filterCat(this, 'all')">All</button>
-          {% for cat in user_categories %}
-          <button class="cf" onclick="filterCat(this, '{{ cat }}')">{{ cat }}</button>
-          {% endfor %}
-        </div>
-        <div class="items-scroll">
-          <div class="items" id="rssItems">
-            {% if rss_items %}
-              {% for item in rss_items %}
-              <div class="item" data-cat="{{ display_names.get(item.category, item.category) }}" onclick="toggleItem(event, this)">
-                <span class="it-chev"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L7 5L3.5 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <div class="it-body">
-                  <div class="it-title">{{ item.title }}</div>
-                  <div class="it-meta">
-                    <span class="src">{{ item.source }}</span>
-                  </div>
-                </div>
-                <span class="cat-tag">{{ display_names.get(item.category, item.category) }}{% if item.subcategory %}: {{ item.subcategory }}{% endif %}</span>
-                {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
-              </div>
-              {% endfor %}
-            {% else %}
-              <div class="empty-state">No RSS inputs recorded</div>
-            {% endif %}
+      <!-- Left pane -->
+      <div class="pane is-left">
+        <!-- View 1 left: raw inputs -->
+        <div class="view-content" data-view="pass1">
+          <div class="cat-filters" id="catFiltersV1">
+            <button class="cf active" onclick="filterCat(this, 'all')">All</button>
+            {% for cat in user_categories %}
+            <button class="cf" onclick="filterCat(this, '{{ cat }}')">{{ cat }}</button>
+            {% endfor %}
           </div>
-          <div class="items hidden" id="redditItems">
-            {% if reddit_items %}
-              {% for item in reddit_items %}
-              <div class="item" data-cat="{{ display_names.get(item.category, item.category) }}" onclick="toggleItem(event, this)">
-                <span class="it-chev"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L7 5L3.5 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <div class="it-body">
-                  <div class="it-title">{{ item.title }}</div>
-                  <div class="it-meta">
-                    <span class="src">{{ item.source }}</span>
+          <div class="input-tabs">
+            <button class="tab active" data-tab="rss" onclick="switchTab(this)">
+              <span class="src-dot rss"></span>RSS Inputs
+              <span class="count">{{ "%02d" | format(rss_items | length) }}</span>
+            </button>
+            <button class="tab" data-tab="reddit" onclick="switchTab(this)">
+              <span class="src-dot reddit"></span>Reddit Inputs
+              <span class="count">{{ "%02d" | format(reddit_items | length) }}</span>
+            </button>
+          </div>
+          <div class="items-scroll">
+            <div class="items" id="rssItems">
+              {% if rss_items %}
+                {% for item in rss_items %}
+                <div class="item" data-cat="{{ display_names.get(item.category, item.category) }}" onclick="toggleItem(event, this)">
+                  <span class="it-chev"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L7 5L3.5 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <div class="it-body">
+                    <div class="it-title">{{ item.title }}</div>
+                    <div class="it-meta">
+                      <span class="src">{{ item.source }}</span>
+                    </div>
                   </div>
+                  <span class="cat-tag">{{ display_names.get(item.category, item.category) }}{% if item.subcategory %}: {{ item.subcategory }}{% endif %}</span>
+                  {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
                 </div>
-                <span class="cat-tag">{{ display_names.get(item.category, item.category) }}{% if item.subcategory %}: {{ item.subcategory }}{% endif %}</span>
-                {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
-              </div>
-              {% endfor %}
-            {% else %}
-              <div class="empty-state">No Reddit inputs recorded</div>
-            {% endif %}
+                {% endfor %}
+              {% else %}
+                <div class="empty-state">No RSS inputs recorded</div>
+              {% endif %}
+            </div>
+            <div class="items hidden" id="redditItems">
+              {% if reddit_items %}
+                {% for item in reddit_items %}
+                <div class="item" data-cat="{{ display_names.get(item.category, item.category) }}" onclick="toggleItem(event, this)">
+                  <span class="it-chev"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L7 5L3.5 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <div class="it-body">
+                    <div class="it-title">{{ item.title }}</div>
+                    <div class="it-meta">
+                      <span class="src">{{ item.source }}</span>
+                    </div>
+                  </div>
+                  <span class="cat-tag">{{ display_names.get(item.category, item.category) }}{% if item.subcategory %}: {{ item.subcategory }}{% endif %}</span>
+                  {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="empty-state">No Reddit inputs recorded</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- View 2 left: pass 1 cards with filter -->
+        <div class="view-content hidden" data-view="pass2">
+          <div class="pane-head">
+            <span class="stage p1"><span class="sn">1</span>Pass 1 · Condensed Summaries</span>
+          </div>
+          <div class="cat-filters" id="catFiltersV2">
+            <button class="cf active" onclick="filterCat(this, 'all')">All</button>
+            {% for cat in user_categories %}
+            <button class="cf" onclick="filterCat(this, '{{ cat }}')">{{ cat }}</button>
+            {% endfor %}
+          </div>
+          <div class="pane-scroll pass1-scroll">
+            <div class="p1-list">
+              {% if pass1_summaries %}
+                {% for p in pass1_summaries %}
+                <div class="p1-card" data-cat="{{ display_names.get(p.category, p.category) }}">
+                  <div class="p1-top">
+                    <span class="p1-key"><span class="pcat">{{ p.category }}/</span>{{ p.subcategory }}</span>
+                  </div>
+                  <p class="p1-summary">{{ p.summary }}</p>
+                  <div class="p1-prov"><b>{{ p.item_count }}</b> items <span class="arrow">→</span> <b>1</b> summary</div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="empty-state" style="padding: 40px;">No Pass 1 data recorded. Re-run the pipeline to populate.</div>
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="col-output">
-        <div class="digest-block">
-          <div class="digest-head">
-            <h2>Final Digest Output</h2>
+      <!-- Right pane -->
+      <div class="pane">
+        <!-- View 1 right: pass 1 cards -->
+        <div class="view-content" data-view="pass1">
+          <div class="pane-head">
+            <span class="stage p1"><span class="sn">1</span>Pass 1 · Condensed Summaries</span>
           </div>
-          {% if digest_text %}
-          <div class="digest-paper">
-            <div class="dateline">{{ selected_date }}</div>
-            <div class="digest-text">{{ digest_text }}</div>
+          <div class="pane-scroll pass1-scroll">
+            <div class="p1-list">
+              {% if pass1_summaries %}
+                {% for p in pass1_summaries %}
+                <div class="p1-card" data-cat="{{ display_names.get(p.category, p.category) }}">
+                  <div class="p1-top">
+                    <span class="p1-key"><span class="pcat">{{ p.category }}/</span>{{ p.subcategory }}</span>
+                  </div>
+                  <p class="p1-summary">{{ p.summary }}</p>
+                  <div class="p1-prov"><b>{{ p.item_count }}</b> items <span class="arrow">→</span> <b>1</b> summary</div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="empty-state" style="padding: 40px;">No Pass 1 data recorded. Re-run the pipeline to populate.</div>
+              {% endif %}
+            </div>
           </div>
-          {% else %}
-          <div class="empty-state">No digest recorded for this date</div>
-          {% endif %}
+        </div>
+
+        <!-- View 2 right: final digest -->
+        <div class="view-content hidden" data-view="pass2">
+          <div class="pane-head">
+            <span class="stage"><span class="sn">2</span>Final Digest Output</span>
+          </div>
+          <div class="pane-scroll">
+            <div class="digest-block">
+              {% if digest_text %}
+              <div class="digest-paper">
+                <div class="dateline">{{ selected_date }}</div>
+                <div class="digest-text">{{ digest_text }}</div>
+              </div>
+              {% else %}
+              <div class="empty-state">No digest recorded for this date</div>
+              {% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -537,12 +684,29 @@ function toggleItem(e, el) {
 
 function filterCat(btn, cat) {
   document.querySelectorAll('.cat-filters .cf').forEach(function(b) {
-    b.classList.toggle('active', b === btn);
+    var match = (cat === 'all' && b.textContent.trim() === 'All') ||
+                (cat !== 'all' && b.textContent.trim() === cat);
+    b.classList.toggle('active', match);
   });
-  document.querySelectorAll('.item[data-cat]').forEach(function(item) {
-    item.classList.toggle('cat-hidden', cat !== 'all' && item.dataset.cat !== cat);
+  document.querySelectorAll('.item[data-cat], .p1-card[data-cat]').forEach(function(el) {
+    el.classList.toggle('cat-hidden', cat !== 'all' && el.dataset.cat !== cat);
   });
 }
+
+function switchView(pass) {
+  document.querySelectorAll('.view-content').forEach(function(el) {
+    el.classList.toggle('hidden', el.dataset.view !== pass);
+  });
+  document.querySelectorAll('.vt-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.pass === pass);
+  });
+  try { localStorage.setItem('digestEval.pass', pass); } catch(e) {}
+}
+(function() {
+  var saved = null;
+  try { saved = localStorage.getItem('digestEval.pass'); } catch(e) {}
+  if (saved === 'pass2') switchView('pass2');
+})();
 
 function navigate() {
   var userId = document.getElementById('userSelect').value;
