@@ -267,6 +267,12 @@
     display: none; grid-column: 1 / -1;
   }
   .item.expanded .it-summary { display: block; }
+  .it-source-link {
+    display: inline-block; margin-top: 10px;
+    font-family: "JetBrains Mono", monospace; font-size: 11px;
+    color: var(--accent); text-decoration: none;
+  }
+  .it-source-link:hover { text-decoration: underline; text-underline-offset: 2px; }
   .item .cat-tag {
     font-family: "JetBrains Mono", monospace; font-size: 9px; letter-spacing: 0.06em;
     color: var(--ink-faint); text-transform: uppercase;
@@ -551,7 +557,7 @@
                     </div>
                   </div>
                   <span class="cat-tag">{{ display_names.get(item.category, item.category) }}{% if item.subcategory %}: {{ item.subcategory }}{% endif %}</span>
-                  {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
+                  <div class="it-summary">{% if item.summary %}{{ item.summary }}{% else %}<span style="color:var(--ink-faint)">No scraped content</span>{% endif %}{% if item.url %}<a class="it-source-link" href="{{ item.url }}" target="_blank" rel="noopener">Open source ↗</a>{% endif %}</div>
                 </div>
                 {% endfor %}
               {% else %}
@@ -570,7 +576,7 @@
                     </div>
                   </div>
                   <span class="cat-tag">{{ display_names.get(item.category, item.category) }}{% if item.subcategory %}: {{ item.subcategory }}{% endif %}</span>
-                  {% if item.summary %}<div class="it-summary">{{ item.summary }}</div>{% endif %}
+                  <div class="it-summary">{% if item.summary %}{{ item.summary }}{% else %}<span style="color:var(--ink-faint)">No scraped content</span>{% endif %}{% if item.url %}<a class="it-source-link" href="{{ item.url }}" target="_blank" rel="noopener">Open source ↗</a>{% endif %}</div>
                 </div>
                 {% endfor %}
               {% else %}
@@ -679,6 +685,7 @@ function toggleContext() {
 }
 
 function toggleItem(e, el) {
+  if (e.target.closest('a')) return;
   el.classList.toggle('expanded');
 }
 
