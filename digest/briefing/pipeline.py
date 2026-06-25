@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -12,10 +12,11 @@ from .reddit import fetch_all as fetch_reddit
 from .sources import CATEGORIES, SUBCATEGORIES
 from ..db.store import (
     get_all_users, get_user_subcategories,
-    get_previous_digest, save_digest,
+    get_previous_digest, save_digest, save_digest_run_inputs, save_pass1_summaries,
     insert_reddit_items, get_unclassified_items, update_item_subcategories,
+    get_rss_items_by_subcategory, get_reddit_items_by_category,
 )
-from .summarizer import build_user_digest, classify_rss_items, clear_cache
+from .summarizer import build_user_digest, classify_rss_items, clear_cache, _pass1_cache
 from ..services.tts import generate_audio, cleanup_old_audio
 from ..services.storage import upload_audio, delete_audio
 from ..services.mailer import send_digest_email
@@ -66,18 +67,38 @@ def run_pipeline():
             logger.info("  %d categories, %d subcategories",
                         len(user_subs), sum(len(v) for v in user_subs.values()))
 
+            date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+            snapshot_rss = []
+            snapshot_reddit = []
+            for cat, subs in user_subs.items():
+                for sub in subs:
+                    for r in get_rss_items_by_subcategory(cat, sub):
+                        r["category"] = cat
+                        r["subcategory"] = sub
+                        snapshot_rss.append(r)
+                    for r in get_reddit_items_by_category(cat, [sub], cutoff):
+                        r["source"] = f"r/{r['subreddit']}"
+                        r["summary"] = r.get("body", "")
+                        snapshot_reddit.append(r)
             previous = get_previous_digest(user["id"])
             digest_text = build_user_digest(user_subs, previous_digest=previous)
+
             if not digest_text:
                 logger.warning("  Empty digest for %s, skipping", email)
                 continue
 
+            save_digest_run_inputs(user["id"], date_str, snapshot_rss, snapshot_reddit)
+            item_counts: dict[str, int] = {}
+            for item in snapshot_rss + snapshot_reddit:
+                key = f"{item.get('category')}/{item.get('subcategory')}"
+                item_counts[key] = item_counts.get(key, 0) + 1
+            save_pass1_summaries(user["id"], date_str, dict(_pass1_cache), item_counts)
             save_digest(user["id"], digest_text)
             audio_path = generate_audio(digest_text, email)
             audio_url = upload_audio(audio_path)
 
             cats = ",".join(user_subs.keys())
-            date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             player_url = f"{APP_URL}/play?audio={audio_url}&cats={cats}&user={user['id']}&date={date_str}"
             send_digest_email(email, player_url)
 

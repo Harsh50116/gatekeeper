@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from flask import Blueprint, render_template, request, redirect, url_for
 
 from ...briefing.sources import CATEGORIES, SUBCATEGORIES
-from ...briefing.summarizer import build_user_digest
-from ...db.store import register_user, get_user_subcategories, save_digest, get_user_by_email, update_user_categories, save_user_subcategories, has_recent_items
+from ...briefing.summarizer import build_user_digest, _pass1_cache
+from ...db.store import register_user, get_user_subcategories, save_digest, save_digest_run_inputs, save_pass1_summaries, get_user_by_email, update_user_categories, save_user_subcategories, has_recent_items, get_rss_items_by_subcategory, get_reddit_items_by_category
 from ...services.tts import generate_audio
 from ...services.storage import upload_audio
 from ...services.mailer import send_digest_email
@@ -180,12 +180,33 @@ def _send_welcome_digest(user_id: str, email: str):
             print(f"[DIGEST] No subcategory preferences for {email}, skipping")
             return
 
+        from datetime import timedelta
+        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        snapshot_rss = []
+        snapshot_reddit = []
+        for cat, subs in user_subs.items():
+            for sub in subs:
+                for r in get_rss_items_by_subcategory(cat, sub):
+                    r["category"] = cat
+                    r["subcategory"] = sub
+                    snapshot_rss.append(r)
+                for r in get_reddit_items_by_category(cat, [sub], cutoff):
+                    r["source"] = f"r/{r['subreddit']}"
+                    r["summary"] = r.get("body", "")
+                    snapshot_reddit.append(r)
         print(f"[DIGEST] Building digest for {len(user_subs)} categories...")
         digest_text = build_user_digest(user_subs)
         if not digest_text:
             print(f"[DIGEST] Empty digest for {email}")
             return
 
+        save_digest_run_inputs(user_id, date_str, snapshot_rss, snapshot_reddit)
+        item_counts: dict[str, int] = {}
+        for item in snapshot_rss + snapshot_reddit:
+            key = f"{item.get('category')}/{item.get('subcategory')}"
+            item_counts[key] = item_counts.get(key, 0) + 1
+        save_pass1_summaries(user_id, date_str, dict(_pass1_cache), item_counts)
         print(f"[DIGEST] Saving digest to history...")
         save_digest(user_id, digest_text)
         print(f"[DIGEST] Generating audio...")

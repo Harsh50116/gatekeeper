@@ -397,3 +397,101 @@ def get_user_reddit_items(user_id: str) -> dict[str, list[dict]]:
                 for r in rows
             ]
     return items_by_category
+
+
+def save_digest_run_inputs(user_id: str, digest_date: str, rss_items: list[dict], reddit_items: list[dict]) -> None:
+    conn = get_connection()
+    cur = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    cur.execute("DELETE FROM digest_run_inputs WHERE user_id = %s AND digest_date = %s", (user_id, digest_date))
+    for item in rss_items:
+        cur.execute(
+            "INSERT INTO digest_run_inputs (user_id, digest_date, source_type, item_id, category, subcategory, title, url, source, published, summary, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (user_id, digest_date, "rss", item.get("id"), item.get("category", ""), item.get("subcategory"),
+             item["title"], item["url"], item["source"], item.get("published"), item.get("summary"), now),
+        )
+    for item in reddit_items:
+        cur.execute(
+            "INSERT INTO digest_run_inputs (user_id, digest_date, source_type, item_id, category, subcategory, title, url, source, published, summary, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (user_id, digest_date, "reddit", item.get("id"), item.get("category", ""), item.get("subcategory"),
+             item["title"], item["url"], item["source"], item.get("published"), item.get("summary"), now),
+        )
+    conn.commit()
+    conn.close()
+
+
+def get_digest_run_inputs(user_id: str, digest_date: str) -> dict[str, list[dict]]:
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT source_type, category, subcategory, title, url, source, published, summary "
+        "FROM digest_run_inputs WHERE user_id = %s AND digest_date = %s "
+        "ORDER BY source_type, category, published DESC",
+        (user_id, digest_date),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    result: dict[str, list[dict]] = {"rss": [], "reddit": []}
+    for r in rows:
+        result[r["source_type"]].append(dict(r))
+    return result
+
+
+def get_admin_users() -> list[dict]:
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT DISTINCT u.id, u.email
+        FROM users u
+        JOIN digest_run_inputs d ON u.id = d.user_id
+        ORDER BY u.email
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_digest_dates(user_id: str) -> list[str]:
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT DISTINCT digest_date FROM digest_run_inputs WHERE user_id = %s ORDER BY digest_date DESC",
+        (user_id,),
+    )
+    dates = [r[0] for r in cur.fetchall()]
+    conn.close()
+    return dates
+
+
+def save_pass1_summaries(user_id: str, digest_date: str, summaries: dict[str, str], item_counts: dict[str, int]) -> None:
+    conn = get_connection()
+    cur = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    cur.execute("DELETE FROM digest_run_pass1 WHERE user_id = %s AND digest_date = %s", (user_id, digest_date))
+    for key, summary in summaries.items():
+        if not summary:
+            continue
+        cat, sub = key.split("/", 1)
+        cur.execute(
+            "INSERT INTO digest_run_pass1 (user_id, digest_date, category, subcategory, summary, item_count, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (user_id, digest_date, cat, sub, summary, item_counts.get(key, 0), now),
+        )
+    conn.commit()
+    conn.close()
+
+
+def get_pass1_summaries(user_id: str, digest_date: str) -> list[dict]:
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT category, subcategory, summary, item_count "
+        "FROM digest_run_pass1 WHERE user_id = %s AND digest_date = %s "
+        "ORDER BY category, subcategory",
+        (user_id, digest_date),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
