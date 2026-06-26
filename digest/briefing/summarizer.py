@@ -3,44 +3,40 @@ import os
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-import httpx
+from groq import Groq
 
 from .sources import SUBCATEGORIES
 from ..db.store import get_rss_items_by_subcategory, get_reddit_items_by_category
 
 logger = logging.getLogger(__name__)
 
-HYPERBOLIC_URL = "https://api.hyperbolic.xyz/v1/chat/completions"
-MODEL = "meta-llama/Llama-3.3-70B-Instruct"
+MODEL = "llama-3.3-70b-versatile"
 MAX_RETRIES = 1
+GROQ_MAX_RETRIES = 6
+
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 _pass1_cache: dict[str, str] = {}
 
 
-def _api_key() -> str:
-    key = os.environ.get("HYPERBOLIC_KEY", "")
-    if not key:
-        raise RuntimeError("HYPERBOLIC_KEY not set in environment")
-    return key
+def _get_client() -> Groq:
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY not set in environment")
+    return Groq(api_key=GROQ_API_KEY, max_retries=GROQ_MAX_RETRIES)
 
 
 def _call_llm(system: str, user: str) -> str:
-    resp = httpx.post(
-        HYPERBOLIC_URL,
-        headers={"Authorization": f"Bearer {_api_key()}"},
-        json={
-            "model": MODEL,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            "temperature": 0.4,
-            "max_tokens": 1024,
-        },
-        timeout=180.0,
+    client = _get_client()
+    resp = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        temperature=0.4,
+        max_tokens=1024,
     )
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"].strip()
+    return resp.choices[0].message.content.strip()
 
 
 def _format_items_block(items: list[dict]) -> str:
@@ -100,10 +96,19 @@ def summarize_subcategory(category: str, subcategory: str) -> str:
     return summary
 
 
+PER_CATEGORY_WORDS = 160
+MIN_DIGEST_WORDS = 400
+
+
+def _digest_word_target(num_categories: int) -> int:
+    return max(MIN_DIGEST_WORDS, num_categories * PER_CATEGORY_WORDS)
+
+
 PASS2_SYSTEM = """You are a radio morning show host writing a spoken news briefing.
 
 Rules:
-- Write exactly 400 to 450 words.
+- Write close to the word count given in the user message.
+- Cover every category provided in the user message — do not drop any. Give each roughly equal attention.
 - Write in a warm, conversational tone as if speaking to the listener directly.
 - Lead with the most engaging or surprising story to hook the listener.
 - Weave between topics naturally. Do NOT group by category or use transitions like "In tech... In sports... In science..."
@@ -125,7 +130,16 @@ def generate_digest(category_summaries: dict[str, str], previous_digest: str | N
     if not combined.strip():
         return ""
 
-    prompt = "Here are today's news summaries by category. Combine them into a single spoken morning briefing:\n\n" + combined
+    num_categories = sum(1 for s in category_summaries.values() if s)
+    target = _digest_word_target(num_categories)
+    lower, upper = int(target * 0.88), int(target * 1.12)
+
+    prompt = (
+        f"Here are today's news summaries across {num_categories} categories. "
+        f"Combine them into a single spoken morning briefing of about {target} words "
+        f"(roughly {PER_CATEGORY_WORDS} words of attention per category). "
+        f"Cover every category below:\n\n" + combined
+    )
 
     if previous_digest:
         prompt += f"---\nYesterday's briefing (for reference — do NOT repeat, but link continuing stories where relevant):\n\n{previous_digest}\n"
@@ -134,12 +148,12 @@ def generate_digest(category_summaries: dict[str, str], previous_digest: str | N
 
     for attempt in range(MAX_RETRIES + 1):
         word_count = len(digest.split())
-        if 390 <= word_count <= 460:
+        if lower <= word_count <= upper:
             break
-        logger.info("Digest word count %d outside range (attempt %d), retrying", word_count, attempt + 1)
+        logger.info("Digest word count %d outside range %d-%d (attempt %d), retrying", word_count, lower, upper, attempt + 1)
         retry_prompt = (
             f"{prompt}\n\nCRITICAL: Your previous response was {word_count} words. "
-            f"You MUST write between 400 and 450 words. Cut content if over, expand if under."
+            f"You MUST write between {lower} and {upper} words. Cut content if over, expand if under."
         )
         digest = _call_llm(PASS2_SYSTEM, retry_prompt)
 
