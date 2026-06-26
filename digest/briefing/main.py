@@ -4,7 +4,9 @@ import os
 import time
 
 import httpx
+from groq import AsyncGroq
 
+from .ratelimit import AsyncRateLimiter
 from .sources import SOURCES
 from ..db.store import insert_items
 from .fetcher import fetch_source, TIMEOUT
@@ -15,9 +17,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-CLASSIFY_CONCURRENCY = 10
-HYPERBOLIC_URL = "https://api.hyperbolic.xyz/v1/chat/completions"
-MODEL = "meta-llama/Llama-3.3-70B-Instruct"
+# Groq free tier (llama-3.3-70b-versatile): 30 RPM. Pace below it with margin.
+GROQ_RPM = 28
+GROQ_MAX_RETRIES = 6
+MODEL = "llama-3.3-70b-versatile"
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 SKIP_CLASSIFY_SOURCES = {"espn_scores", "yfinance"}
 
 CLASSIFY_SYSTEM = """You are a content classifier for a news digest. Given a news item title and summary, classify it as exactly one of:
@@ -28,42 +32,29 @@ CLASSIFY_SYSTEM = """You are a content classifier for a news digest. Given a new
 Respond with ONLY the label: news, announcement, or skip. No explanation."""
 
 
-def _api_key() -> str:
-    key = os.environ.get("HYPERBOLIC_KEY", "")
-    if not key:
-        raise RuntimeError("HYPERBOLIC_KEY not set in environment")
-    return key
-
-
-async def _classify_item(client: httpx.AsyncClient, sem: asyncio.Semaphore, item: dict) -> str:
+async def _classify_item(client: AsyncGroq, limiter: AsyncRateLimiter, item: dict) -> str:
     prompt = f"Title: {item['title']}"
     if item.get("summary"):
         prompt += f"\n\nSummary: {item['summary'][:500]}"
 
-    async with sem:
-        try:
-            resp = await client.post(
-                HYPERBOLIC_URL,
-                headers={"Authorization": f"Bearer {_api_key()}"},
-                json={
-                    "model": MODEL,
-                    "messages": [
-                        {"role": "system", "content": CLASSIFY_SYSTEM},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0.1,
-                    "max_tokens": 16,
-                },
-                timeout=30.0,
-            )
-            resp.raise_for_status()
-            label = resp.json()["choices"][0]["message"]["content"].strip().lower()
-            if label in ("news", "announcement", "skip"):
-                return label
-            return "skip"
-        except Exception as e:
-            logger.warning("RSS classification failed for '%s': %s", item["title"][:50], e)
-            return "news"
+    await limiter.acquire()
+    try:
+        resp = await client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": CLASSIFY_SYSTEM},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+            max_tokens=16,
+        )
+        label = resp.choices[0].message.content.strip().lower()
+        if label in ("news", "announcement", "skip"):
+            return label
+        return "skip"
+    except Exception as e:
+        logger.warning("RSS classification failed for '%s': %s", item["title"][:50], e)
+        return "news"
 
 
 async def classify_rss_items_by_type(items: list[dict]) -> list[dict]:
@@ -73,10 +64,13 @@ async def classify_rss_items_by_type(items: list[dict]) -> list[dict]:
     if not to_classify:
         return passthrough
 
-    sem = asyncio.Semaphore(CLASSIFY_CONCURRENCY)
-    async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY not set in environment")
+
+    limiter = AsyncRateLimiter(GROQ_RPM)
+    async with AsyncGroq(api_key=GROQ_API_KEY, max_retries=GROQ_MAX_RETRIES) as client:
         labels = await asyncio.gather(*[
-            _classify_item(client, sem, item) for item in to_classify
+            _classify_item(client, limiter, item) for item in to_classify
         ])
 
     kept = list(passthrough)

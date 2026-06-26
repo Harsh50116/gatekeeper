@@ -9,7 +9,9 @@ from time import mktime
 
 import feedparser
 import httpx
+from groq import AsyncGroq
 
+from .ratelimit import AsyncRateLimiter
 from .sources import SUBREDDIT_MAP
 
 logger = logging.getLogger(__name__)
@@ -18,10 +20,12 @@ TIMEOUT = httpx.Timeout(15.0)
 USER_AGENT = "GatekeeperDigest/1.0"
 POSTS_PER_SUBREDDIT = 10
 REQUEST_DELAY = 7
-CLASSIFY_CONCURRENCY = 10
+# Groq free tier (llama-3.3-70b-versatile): 30 RPM. Pace below it with margin.
+GROQ_RPM = 28
+GROQ_MAX_RETRIES = 6
 
-HYPERBOLIC_URL = "https://api.hyperbolic.xyz/v1/chat/completions"
-MODEL = "meta-llama/Llama-3.3-70B-Instruct"
+MODEL = "llama-3.3-70b-versatile"
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 CLASSIFY_SYSTEM = """You are a content classifier for a news digest. Given a Reddit post title and body, classify it as exactly one of:
 - news: factual reporting of events, product launches, research papers, data releases
@@ -52,13 +56,6 @@ def _strip_html(raw: str) -> str:
     # Remove trailing "submitted by /u/... [link] [comments]"
     text = re.sub(r"\s*submitted by\s+/u/\S+.*$", "", text, flags=re.DOTALL)
     return text
-
-
-def _api_key() -> str:
-    key = os.environ.get("HYPERBOLIC_KEY", "")
-    if not key:
-        raise RuntimeError("HYPERBOLIC_KEY not set in environment")
-    return key
 
 
 async def fetch_subreddit(
@@ -116,44 +113,40 @@ async def fetch_subreddit(
     return items
 
 
-async def _classify_post(client: httpx.AsyncClient, sem: asyncio.Semaphore, item: dict) -> str:
+async def _classify_post(client: AsyncGroq, limiter: AsyncRateLimiter, item: dict) -> str:
     prompt = f"Title: {item['title']}"
     if item.get("body"):
         prompt += f"\n\nBody: {item['body'][:500]}"
 
-    async with sem:
-        try:
-            resp = await client.post(
-                HYPERBOLIC_URL,
-                headers={"Authorization": f"Bearer {_api_key()}"},
-                json={
-                    "model": MODEL,
-                    "messages": [
-                        {"role": "system", "content": CLASSIFY_SYSTEM},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0.1,
-                    "max_tokens": 16,
-                },
-                timeout=30.0,
-            )
-            resp.raise_for_status()
-            label = resp.json()["choices"][0]["message"]["content"].strip().lower()
-            if label in ("news", "announcement", "skip"):
-                return label
-            return "skip"
-        except Exception as e:
-            logger.warning("Classification failed for '%s': %s", item["title"][:50], e)
-            return "skip"
+    await limiter.acquire()
+    try:
+        resp = await client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": CLASSIFY_SYSTEM},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+            max_tokens=16,
+        )
+        label = resp.choices[0].message.content.strip().lower()
+        if label in ("news", "announcement", "skip"):
+            return label
+        return "skip"
+    except Exception as e:
+        logger.warning("Classification failed for '%s': %s", item["title"][:50], e)
+        return "skip"
 
 
 async def classify_reddit_posts(items: list[dict]) -> list[dict]:
     if not items:
         return []
-    sem = asyncio.Semaphore(CLASSIFY_CONCURRENCY)
-    async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY not set in environment")
+    limiter = AsyncRateLimiter(GROQ_RPM)
+    async with AsyncGroq(api_key=GROQ_API_KEY, max_retries=GROQ_MAX_RETRIES) as client:
         labels = await asyncio.gather(*[
-            _classify_post(client, sem, item) for item in items
+            _classify_post(client, limiter, item) for item in items
         ])
     kept = []
     for item, label in zip(items, labels):
